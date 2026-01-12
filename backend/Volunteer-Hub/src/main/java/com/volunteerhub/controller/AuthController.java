@@ -30,6 +30,7 @@ public class AuthController {
                 "userId", user.getId(),
                 "email", user.getEmail(),
                 "role", user.getRole().name(),
+                "name", user.getName(),
                 "message", "Login successful"
         );
     }

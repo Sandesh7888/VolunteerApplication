@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../auth/hooks/useAuth';
-import { Menu, X, LayoutDashboard, Calendar, User, LogOut } from 'lucide-react';
+import { Menu, X, LayoutDashboard, Calendar, User, LogOut,CheckCircle } from 'lucide-react';
 
 export default function DashboardLayout() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -13,6 +13,7 @@ export default function DashboardLayout() {
   const navItems = [
     { name: 'Dashboard', href: '/volunteer/dashboard', icon: LayoutDashboard },
     { name: 'Events', href: '/volunteer/events', icon: Calendar },
+     { name: 'My Events', href: '/volunteer/my-events', icon: CheckCircle },
     { name: 'Profile', href: '/volunteer/profile', icon: User },
   ];
 

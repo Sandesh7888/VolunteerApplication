@@ -2,6 +2,7 @@ package com.volunteerhub.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -16,27 +17,28 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-
         http
-                // ❌ Disable CSRF (needed for React)
                 .csrf(csrf -> csrf.disable())
 
-                // ✅ Enable CORS
                 .cors(Customizer.withDefaults())
 
-                // ❌ No sessions (REST API)
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
 
-                // ✅ Allow API access (DEV MODE)
                 .authorizeHttpRequests(auth -> auth
+                        // ✅ Allow auth APIs
                         .requestMatchers("/api/auth/**").permitAll()
+
+                        // ✅ FIX: Proper OPTIONS handling
+                        .requestMatchers(HttpMethod.OPTIONS, "/api/**").permitAll()
+
+                        // ⚠️ TEMP: Allow events (for testing)
                         .requestMatchers("/api/events/**").permitAll()
+
                         .anyRequest().permitAll()
                 )
 
-                // ❌ Disable login popup
                 .httpBasic(Customizer.withDefaults());
 
         return http.build();

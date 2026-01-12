@@ -1,14 +1,23 @@
-import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { useApi } from "../../../useApi"; 
-import { Plus, Search, X, Edit2, Trash2, Calendar, MapPin, Users, Tag, Loader2 } from 'lucide-react';
+// src/features/organizer/pages/OrganizerEvents.jsx - ROW TABLE
+import React, { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { useApi } from "../../../useApi";
+import {
+  Plus,
+  Search,
+  X,
+  Edit2,
+  Trash2,
+  CheckCircle,
+  Loader2,
+} from "lucide-react";
 
 export default function OrganizerEvents() {
   const [events, setEvents] = useState([]);
   const [filteredEvents, setFilteredEvents] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [searchTerm, setSearchTerm] = useState('');
+  const [error, setError] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
   const { apiCall } = useApi();
   const navigate = useNavigate();
@@ -18,7 +27,7 @@ export default function OrganizerEvents() {
   }, []);
 
   useEffect(() => {
-    const filtered = events.filter(event =>
+    const filtered = events.filter((event) =>
       event.title.toLowerCase().includes(searchTerm.toLowerCase())
     );
     setFilteredEvents(filtered);
@@ -27,7 +36,7 @@ export default function OrganizerEvents() {
   const fetchMyEvents = async () => {
     try {
       setLoading(true);
-      setError('');
+      setError("");
       const eventsData = await apiCall("/events/myevents");
       setEvents(eventsData);
       setFilteredEvents(eventsData);
@@ -39,30 +48,47 @@ export default function OrganizerEvents() {
   };
 
   const handleDelete = async (eventId) => {
-    if (!window.confirm('Delete this event permanently?')) return;
-
+    if (!window.confirm("Delete this event permanently?")) return;
     try {
-      
-      await fetchMyEvents();
+      await apiCall(`/events/${eventId}`, { method: "DELETE" });
+      alert("✅ Event deleted successfully!");
+      fetchMyEvents();
     } catch (err) {
-      window.location.reload();
+      alert("❌ Delete failed: " + err.message);
+    }
+  };
+
+  const handlePublish = async (eventId) => {
+    try {
+      await apiCall(`/events/${eventId}/publish`, { method: "PATCH" });
+      alert("✅ Event published successfully!");
+      fetchMyEvents();
+    } catch (err) {
+      console.error("Publish error:", err);
+      alert("❌ Publish failed: " + err.message);
     }
   };
 
   const toggleSearch = () => {
     if (searchOpen) {
-      setSearchTerm('');
+      setSearchTerm("");
     }
     setSearchOpen(!searchOpen);
   };
 
+  // Status colors
   const getStatusColor = (status) => {
-    switch(status) {
-      case 'PUBLISHED': return 'from-green-500 to-emerald-600 text-white';
-      case 'DRAFT': return 'from-yellow-500 to-amber-600 text-gray-900';
-      case 'COMPLETED': return 'from-blue-500 to-indigo-600 text-white';
-      case 'CANCELLED': return 'from-gray-500 to-gray-600 text-white';
-      default: return 'from-gray-500 to-gray-600 text-white';
+    switch (status) {
+      case "PUBLISHED":
+        return "bg-green-100 text-green-800";
+      case "DRAFT":
+        return "bg-yellow-100 text-yellow-800";
+      case "COMPLETED":
+        return "bg-blue-100 text-blue-800";
+      case "CANCELLED":
+        return "bg-gray-100 text-gray-800";
+      default:
+        return "bg-gray-100 text-gray-800";
     }
   };
 
@@ -85,12 +111,12 @@ export default function OrganizerEvents() {
             <h1 className="text-4xl lg:text-5xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent mb-4 leading-tight">
               My Events
             </h1>
-            <p className="text-xl text-gray-700">Manage all your created events</p>
+            <p className="text-xl text-gray-700">
+              Manage all your created events
+            </p>
           </div>
-          
-          {/* ✅ SEARCH + CREATE BUTTONS SIDE BY SIDE */}
+
           <div className="flex items-center space-x-4 self-start lg:self-auto">
-            {/* Search Toggle */}
             {searchOpen ? (
               <div className="relative w-80">
                 <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
@@ -115,16 +141,21 @@ export default function OrganizerEvents() {
                 className="w-14 h-14 flex-shrink-0 bg-white/90 backdrop-blur-sm border-2 border-purple-200 hover:border-purple-400 rounded-2xl shadow-lg hover:shadow-xl hover:bg-white transition-all duration-200 flex items-center justify-center group"
                 title="Search events"
               >
-                <Search size={20} className="text-purple-600 group-hover:scale-110 transition-transform duration-200" />
+                <Search
+                  size={20}
+                  className="text-purple-600 group-hover:scale-110 transition-transform duration-200"
+                />
               </button>
             )}
-            
-            {/* Create Button */}
-            <Link 
-              to="/organizer/create-event" 
+
+            <Link
+              to="/organizer/create-event"
               className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white px-8 py-4 rounded-xl font-bold text-lg shadow-xl hover:shadow-2xl transform hover:-translate-y-1 transition-all duration-200 flex items-center space-x-3 flex-shrink-0"
             >
-              <Plus size={20} className="group-hover:scale-110 transition-transform duration-200" />
+              <Plus
+                size={20}
+                className="group-hover:scale-110 transition-transform duration-200"
+              />
               <span>Create New Event</span>
             </Link>
           </div>
@@ -139,91 +170,150 @@ export default function OrganizerEvents() {
         {filteredEvents.length === 0 ? (
           <div className="text-center py-32">
             <div className="w-32 h-32 bg-gradient-to-r from-purple-400 to-indigo-400 rounded-2xl flex items-center justify-center mx-auto mb-8 shadow-xl">
-              <Calendar className="w-16 h-16 text-white" />
+              <Plus className="w-16 h-16 text-white" />
             </div>
-            <h3 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-6">No Events {searchTerm ? 'Match' : 'Created'}</h3>
+            <h3 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-6">
+              No Events {searchTerm ? "Match" : "Created"}
+            </h3>
             <p className="text-xl text-gray-600 mb-10 max-w-md mx-auto">
-              {searchTerm 
-                ? `No events found matching "${searchTerm}"` 
-                : "Start by creating your first community event"
-              }
+              {searchTerm
+                ? `No events found matching "${searchTerm}"`
+                : "Start by creating your first community event"}
             </p>
-            <Link 
-              to="/organizer/create-event" 
+            <Link
+              to="/organizer/create-event"
               className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white px-12 py-4 rounded-xl font-bold text-xl shadow-xl hover:shadow-2xl transform hover:-translate-y-1 transition-all duration-200 inline-flex items-center space-x-2"
             >
               <Plus size={20} />
-              <span>{searchTerm ? 'Try Different Search' : 'Launch First Event'}</span>
+              <span>
+                {searchTerm ? "Try Different Search" : "Launch First Event"}
+              </span>
             </Link>
           </div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-6 lg:gap-8">
-            {filteredEvents.map((event) => (
-              <div key={event.id} className="group bg-white/95 backdrop-blur-xl rounded-2xl shadow-xl hover:shadow-2xl border border-purple-100 hover:border-purple-300 overflow-hidden transform hover:-translate-y-2 transition-all duration-300">
-                <div className="p-8">
-                  <div className="flex items-center justify-between mb-6">
-                    <span className={`px-4 py-2 rounded-xl font-bold text-sm uppercase tracking-wide shadow-md ${getStatusColor(event.status)}`}>
-                      {event.status}
-                    </span>
-                    <div className="flex space-x-2">
-                      <button 
-                        onClick={() => navigate(`/organizer/events/${event.id}/edit`)} 
-                        className="p-2.5 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-xl hover:shadow-lg hover:shadow-blue-500/25 transform hover:scale-105 transition-all duration-200"
-                        title="Edit Event"
-                      >
-                        <Edit2 size={18} />
-                      </button>
-                      <button 
-                        onClick={() => handleDelete(event.id)} 
-                        className="p-2.5 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white rounded-xl hover:shadow-lg hover:shadow-red-500/25 transform hover:scale-105 transition-all duration-200"
-                        title="Delete Event"
-                      >
-                        <Trash2 size={18} />
-                      </button>
-                    </div>
-                  </div>
+          <div className="bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl border border-purple-100 overflow-hidden">
+            {/* ✅ ROW TABLE FORMAT */}
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gradient-to-r from-purple-50 to-indigo-50 border-b border-purple-200">
+                  <tr>
+                    <th className="px-8 py-6 text-left text-lg font-bold text-gray-900 uppercase tracking-wider">
+                      Title
+                    </th>
+                    <th className="px-6 py-6 text-left text-lg font-bold text-gray-900 uppercase tracking-wider">
+                      Category
+                    </th>
+                    <th className="px-6 py-6 text-left text-lg font-bold text-gray-900 uppercase tracking-wider hidden md:table-cell">
+                      Date
+                    </th>
+                    <th className="px-6 py-6 text-left text-lg font-bold text-gray-900 uppercase tracking-wider hidden lg:table-cell">
+                      Location
+                    </th>
+                    <th className="px-6 py-6 text-left text-lg font-bold text-gray-900 uppercase tracking-wider hidden xl:table-cell">
+                      Volunteers
+                    </th>
+                    <th className="px-6 py-6 text-right text-lg font-bold text-gray-900 uppercase tracking-wider">
+                      Status
+                    </th>
+                    <th className="px-6 py-6 text-right text-lg font-bold text-gray-900 uppercase tracking-wider">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-purple-100">
+                  {filteredEvents.map((event) => (
+                    <tr
+                      key={event.id}
+                      className="hover:bg-purple-50 transition-colors duration-200 group"
+                    >
+                      {/* Title */}
+                      <td className="px-8 py-6 font-semibold text-xl text-gray-900 max-w-md truncate">
+                        {event.title}
+                      </td>
 
-                  <h3 className="text-2xl lg:text-3xl font-bold text-gray-900 mb-4 leading-tight group-hover:text-purple-600 transition-colors duration-200">
-                    {event.title}
-                  </h3>
-                  
-                  <p className="text-gray-600 text-lg leading-relaxed mb-8 line-clamp-3">{event.description}</p>
-                  
-                  <div className="grid grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <div className="flex items-center text-sm font-bold text-purple-600 uppercase tracking-wide space-x-1">
-                        <Calendar size={16} />
-                        <span>Date</span>
-                      </div>
-                      <div className="text-xl font-bold text-gray-900">
-                        {event.startDate ? new Date(event.startDate).toLocaleDateString('en-IN') : 'TBD'}
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <div className="flex items-center text-sm font-bold text-purple-600 uppercase tracking-wide space-x-1">
-                        <MapPin size={16} />
-                        <span>Location</span>
-                      </div>
-                      <div className="text-xl font-bold text-gray-900">{event.locationName}</div>
-                    </div>
-                    <div className="space-y-2">
-                      <div className="flex items-center text-sm font-bold text-purple-600 uppercase tracking-wide space-x-1">
-                        <Users size={16} />
-                        <span>Volunteers</span>
-                      </div>
-                      <div className="text-xl font-bold text-gray-900">{event.currentVolunteers || 0}/{event.requiredVolunteers || 0}</div>
-                    </div>
-                    <div className="space-y-2">
-                      <div className="flex items-center text-sm font-bold text-purple-600 uppercase tracking-wide space-x-1">
-                        <Tag size={16} />
-                        <span>Category</span>
-                      </div>
-                      <div className="text-xl font-bold capitalize text-gray-900">{event.category}</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
+                      {/* Category */}
+                      <td className="px-6 py-6">
+                        <span className="px-4 py-2 bg-purple-100 text-purple-800 rounded-xl font-bold uppercase text-sm tracking-wide">
+                          {event.category}
+                        </span>
+                      </td>
+
+                      {/* Date */}
+                      <td className="px-6 py-6 hidden md:table-cell font-bold text-lg text-gray-900">
+                        {event.startDate
+                          ? new Date(event.startDate).toLocaleDateString(
+                              "en-IN"
+                            )
+                          : "TBD"}
+                      </td>
+
+                      {/* Location */}
+                      <td className="px-6 py-6 hidden lg:table-cell font-semibold text-gray-900 max-w-xs truncate">
+                        {event.locationName}
+                      </td>
+
+                      {/* Volunteers */}
+                      <td className="px-6 py-6 hidden xl:table-cell">
+                        <span className="px-4 py-2 bg-blue-100 text-blue-800 rounded-xl font-bold">
+                          {event.currentVolunteers || 0}/
+                          {event.requiredVolunteers || 0}
+                        </span>
+                      </td>
+
+                      {/* Status */}
+                      <td className="px-6 py-6 text-right">
+                        <span
+                          className={`px-4 py-2 rounded-xl font-bold uppercase text-sm tracking-wide ${getStatusColor(
+                            event.status
+                          )}`}
+                        >
+                          {event.status}
+                        </span>
+                      </td>
+
+                      {/* Actions */}
+                      <td className="px-6 py-6 text-right space-x-2">
+                        {event.status === "DRAFT" && (
+                          <button
+                            onClick={() => handlePublish(event.id)}
+                            className="p-2 bg-green-500 hover:bg-green-600 text-white rounded-lg shadow-md hover:shadow-lg transition-all duration-200 inline-flex items-center space-x-1 text-sm font-bold"
+                            title="Publish"
+                          >
+                            <CheckCircle size={16} />
+                            <span className="hidden sm:inline">Publish</span>
+                          </button>
+                        )}
+                       
+                        <button
+                          onClick={() => {
+                            console.log(
+                              "🔍 Editing event:",
+                              event.id,
+                              event.title
+                            ); // DEBUG
+                            navigate(`/organizer/events/${event.id}/edit`);
+                          }}
+                          className="p-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg shadow-md hover:shadow-lg transition-all duration-200 inline-flex items-center space-x-1 text-sm font-bold"
+                          title="Edit"
+                        >
+                          <Edit2 size={16} />
+                          <span className="hidden md:inline">Edit</span>
+                        </button>
+                        <button
+                          onClick={() => handleDelete(event.id)}
+                          id="deleterecord_dtn"
+                          className=" p-2 bg-red-500 hover:bg-red-600 text-white rounded-lg shadow-md hover:shadow-lg transition-all duration-200 inline-flex items-center space-x-1 text-sm font-bold"
+                          title="Delete"
+                        >
+                          <Trash2 size={16} />
+                          <span className="hidden md:inline">Delete</span>
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </div>

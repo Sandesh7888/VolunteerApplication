@@ -15,11 +15,16 @@ import OrganizerDashboard from "../features/organizer/pages/OrganizerDashboard";
 import OrganizerEvents from "../features/organizer/pages/OrganizerEvents";
 import CreateEvent from "../features/organizer/pages/CreateEvent";
 import OrganizerDashboardLayout from "../features/organizer/layout/DashboardLayout";
+import EditEvent from '../features/organizer/pages/EditEvent';
+
+
 
 // Volunteer routes
 import VolunteerDashboard from "../features/volunteer/pages/VolunteerDashboard";
 import VolunteerAvailableEvents from "../features/volunteer/pages/VolunteerAvailableEvents";
 import VolunteerDashboardLayout from "../features/volunteer/layout/DashboardLayout";
+import VolunteerMyEvents from "../features/volunteer/pages/VolunteerMyEvents";
+import VolunteerEventDetails from "../features/volunteer/pages/VolunteerEventDetails";
 
 export default function Routers() {
   return (
@@ -56,7 +61,10 @@ export default function Routers() {
         <Route path="dashboard" element={<OrganizerDashboard />} />
         <Route path="events" element={<OrganizerEvents />} />
         <Route path="create-event" element={<CreateEvent />} />
+        <Route path="my-events" element={<VolunteerMyEvents />} />  
+        <Route path="events/:id/edit" element={<EditEvent />} /> 
       </Route>
+      
 
       {/* Volunteer Routes */}
       <Route
@@ -70,6 +78,8 @@ export default function Routers() {
         <Route path="dashboard" element={<VolunteerDashboard />} />
         <Route path="events" element={<VolunteerAvailableEvents />} />
         <Route index element={<Navigate to="dashboard" replace />} />
+        <Route path="my-events" element={<VolunteerMyEvents />} />
+         <Route path="events/:eventId" element={<VolunteerEventDetails />} /> 
       </Route>
 
       {/* Catch All */}

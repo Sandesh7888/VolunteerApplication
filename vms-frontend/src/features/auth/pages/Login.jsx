@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
+import { ArrowRight, ShieldCheck, Activity } from "lucide-react";
+import authBg from "../../../assets/home_hero.png";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -11,7 +13,6 @@ export default function Login() {
   const navigate = useNavigate();
   const { login } = useAuth();
 
-  // ✅ Clear autofilled values on mount
   useEffect(() => {
     setEmail("");
     setPassword("");
@@ -37,18 +38,11 @@ export default function Login() {
       }
 
       const user = await response.json();
-      console.log("Login successful:", user);
-
       login(user);
 
-      // ✅ Role-based navigation
-      if (user.role === "ADMIN") {
-        navigate("/admin/dashboard");
-      } else if (user.role === "ORGANIZER") {
-        navigate("/organizer/dashboard");
-      } else {
-        navigate("/volunteer/dashboard");
-      }
+      if (user.role === "ADMIN") navigate("/admin/dashboard");
+      else if (user.role === "ORGANIZER") navigate("/organizer/dashboard");
+      else navigate("/volunteer/dashboard");
     } catch (err) {
       setError(err.message);
     } finally {
@@ -57,66 +51,61 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        <div className="bg-white/80 backdrop-blur-xl shadow-2xl rounded-3xl p-10 border border-white/50">
-          <div className="text-center">
-            <h2 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-4">
-              Welcome Back
+    <div className="h-screen w-full relative overflow-hidden flex items-center justify-center py-6 px-4">
+      
+      {/* 1. BACKGROUND IMAGE + GRADIENT OVERLAY */}
+      <div className="absolute inset-0 z-0">
+        <img 
+          src={authBg} 
+          alt="Background" 
+          className="w-full h-full object-cover opacity-50"
+        />
+        <div className="absolute inset-0 bg-gradient-to-br from-indigo-600/90 via-blue-600/90 to-emerald-500/90" />
+        <div className="absolute top-1/4 -right-20 w-80 h-80 bg-white/10 rounded-full blur-[100px] animate-blob" />
+        <div className="absolute top-1/2 -left-20 w-80 h-80 bg-white/10 rounded-full blur-[100px] animate-blob animation-delay-2000" />
+      </div>
+
+      <div className="max-w-md w-full relative z-10">
+        {/* Glass Card */}
+        <div className="bg-white/80 backdrop-blur-3xl shadow-2xl rounded-[2.5rem] p-10 border border-white/50 text-slate-900">
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-50 text-emerald-600 border border-emerald-100 rounded-full mb-6 font-bold text-[10px] tracking-widest uppercase italic">
+              <ShieldCheck size={12} /> Secure Access
+            </div>
+            <h2 className="text-4xl font-black text-slate-900 tracking-tighter mb-2">
+              Resume <span className="text-emerald-600">Impact.</span>
             </h2>
-            <p className="text-gray-600">Sign in to your account</p>
+            <p className="text-slate-500 font-bold text-xs uppercase tracking-widest">Identify to Portal</p>
           </div>
 
-          <form
-            onSubmit={handleSubmit}
-            className="mt-8 space-y-6"
-            autoComplete="off"
-          >
-            {/* ✅ Chrome autofill blocker */}
-            <input
-              type="text"
-              name="fakeusernameremembered"
-              style={{ display: "none" }}
-            />
-            <input
-              type="password"
-              name="fakepasswordremembered"
-              style={{ display: "none" }}
-            />
-
+          <form onSubmit={handleSubmit} className="space-y-6" autoComplete="off">
             {error && (
-              <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-xl animate-pulse">
+              <div className="bg-rose-50 border border-rose-100 text-rose-600 p-4 rounded-2xl text-xs font-bold italic text-center">
                 {error}
               </div>
             )}
 
-            <div>
+            <div className="space-y-4">
               <input
                 type="email"
-                name="email"
-                autoComplete="username"
-                placeholder="Enter your email"
-                className="w-full px-4 py-3 bg-white text-black border border-gray-300 rounded-2xl
-                           focus:ring-2 focus:ring-blue-500 focus:border-blue-500
-                           focus:outline-none text-base placeholder-gray-500
-                           hover:border-gray-400 transition-all duration-200"
+                placeholder="Email Address"
+                className="w-full px-6 py-4 bg-white text-slate-900 border border-slate-200 rounded-2xl
+                           focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50
+                           focus:outline-none text-sm font-bold placeholder-slate-400
+                           hover:border-slate-300 transition-all duration-300"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 disabled={loading}
               />
-            </div>
 
-            <div>
               <input
                 type="password"
-                name="password"
-                autoComplete="new-password"
-                placeholder="Enter your password"
-                className="w-full px-4 py-3 bg-white text-black border border-gray-300 rounded-2xl
-                           focus:ring-2 focus:ring-blue-500 focus:border-blue-500
-                           focus:outline-none text-base placeholder-gray-500
-                           hover:border-gray-400 transition-all duration-200"
+                placeholder="Password"
+                className="w-full px-6 py-4 bg-white text-slate-900 border border-slate-200 rounded-2xl
+                           focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50
+                           focus:outline-none text-sm font-bold placeholder-slate-400
+                           hover:border-slate-300 transition-all duration-300"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
@@ -127,50 +116,27 @@ export default function Login() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800
-                         text-white font-bold py-4 px-6 rounded-2xl text-lg shadow-xl hover:shadow-2xl
-                         transform hover:-translate-y-1 transition-all duration-200
-                         disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+              className="w-full bg-slate-900 hover:bg-slate-800 text-white font-black py-4 px-6 rounded-2xl text-sm uppercase tracking-widest shadow-xl
+                         transform hover:-translate-y-1 active:scale-[0.98] transition-all duration-300
+                         disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? (
-                <span className="flex items-center justify-center">
-                  <svg
-                    className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                  >
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                    />
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                    />
-                  </svg>
-                  Signing in...
+                <span className="flex items-center justify-center gap-2">
+                  <Activity size={18} className="animate-spin" /> AUTHENTICATING...
                 </span>
               ) : (
-                "Sign In"
+                "INITIATE ACCESS"
               )}
             </button>
           </form>
 
-          <div className="text-center pt-8">
-            <p className="text-gray-700 mb-4">Don't have an account?</p>
+          <div className="text-center mt-10">
+            <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest mb-4">DISCOVERY NEW PATH?</p>
             <Link
               to="/register"
-              className="inline-block px-8 py-3 bg-white/50 backdrop-blur-sm border-2 border-blue-500
-                         text-blue-600 font-semibold rounded-2xl hover:bg-blue-50 hover:border-blue-600
-                         transition-all duration-200 shadow-lg hover:shadow-xl"
+              className="inline-flex items-center gap-2 group text-emerald-600 font-bold text-sm hover:underline"
             >
-              Create Account
+              Initialize Node <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
             </Link>
           </div>
         </div>

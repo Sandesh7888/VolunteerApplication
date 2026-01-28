@@ -2,7 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../../features/auth/hooks/useAuth';
 import { useApi } from "../../../useApi"; 
-import { Activity, CheckCircle2, FileText, Users, Loader2 } from 'lucide-react';
+import { Activity, CheckCircle2, FileText, Users, Loader2, Users2, Calendar, Clock, ArrowRight } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie } from 'recharts';
+import { getEventStatus } from '../../../utils/formatters';
 
 const OrganizerDashboard = () => {
   const { user } = useAuth();
@@ -10,40 +12,80 @@ const OrganizerDashboard = () => {
   const [stats, setStats] = useState({
     totalEvents: 0,
     publishedEvents: 0,
-    draftEvents: 0,
+    pendingRequests: 0,
     totalVolunteers: 0
   });
+  const [activeEvents, setActiveEvents] = useState([]);
+  const [chartData, setChartData] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchStats();
+    fetchDashboardData();
   }, []);
 
-  const fetchStats = async () => {
+  const fetchDashboardData = async () => {
     try {
       setLoading(true);
-      const myEvents = await apiCall("/events/myevents");
+      const myEvents = await apiCall(`/events/myevents?userId=${user?.userId}`);
       
+      // Process stats
       const totalEvents = myEvents.length;
       const publishedEvents = myEvents.filter(e => e.status === 'PUBLISHED').length;
-      const draftEvents = myEvents.filter(e => e.status === 'DRAFT').length;
+      
+      let totalPending = 0;
+      for (const event of myEvents) {
+        try {
+          const volunteers = await apiCall(`/events/${event.id}/volunteers`);
+          totalPending += volunteers.filter(v => v.status === 'PENDING').length;
+        } catch (err) {
+          console.error(`Error fetching volunteers for event ${event.id}:`, err);
+        }
+      }
       
       setStats({
         totalEvents,
         publishedEvents,
-        draftEvents,
+        pendingRequests: totalPending,
         totalVolunteers: myEvents.reduce((sum, e) => sum + (e.currentVolunteers || 0), 0)
       });
+
+      // Process Active Events (Strict LIVE checking)
+      const active = myEvents.filter(event => {
+        const status = getEventStatus(
+          event.startDate, 
+          event.endDate, 
+          event.startTime, 
+          event.endTime,
+          event.status
+        );
+        return status === 'LIVE';
+      }).slice(0, 3);
+      setActiveEvents(active);
+
+      // Process Chart Data (Events by Category)
+      const categoryCounts = myEvents.reduce((acc, event) => {
+        acc[event.category] = (acc[event.category] || 0) + 1;
+        return acc;
+      }, {});
+      
+      const chartArr = Object.keys(categoryCounts).map(cat => ({
+        name: cat,
+        count: categoryCounts[cat]
+      }));
+      setChartData(chartArr);
+
     } catch (error) {
-      console.error("Failed to fetch stats:", error);
+      console.error("Failed to fetch dashboard data:", error);
     } finally {
       setLoading(false);
     }
   };
 
+  const COLORS = ['#8b5cf6', '#6366f1', '#10b981', '#f59e0b', '#ef4444'];
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-100 flex items-center justify-center">
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <div className="flex flex-col items-center space-y-4">
           <Loader2 className="h-16 w-16 animate-spin text-purple-600" />
           <p className="text-xl text-gray-600 font-medium">Loading dashboard...</p>
@@ -53,114 +95,136 @@ const OrganizerDashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-100 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-slate-50 py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="text-center mb-16 lg:mb-20">
-          <h1 className="text-4xl lg:text-6xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent mb-6 leading-tight">
-            Welcome Back, {user?.name || user?.email?.split('@')[0]}
-          </h1>
-          <p className="text-xl lg:text-2xl text-gray-700 font-medium max-w-2xl mx-auto">
-            Your organizing journey continues...
-          </p>
+        {/* Simple Header */}
+        <div className="flex items-center justify-between mb-10">
+          <div>
+            <h1 className="text-3xl font-black text-slate-900 tracking-tight">Organizer <span className="text-purple-600">Dashboard</span></h1>
+            <p className="text-slate-500 font-medium">Manage your community impact projects</p>
+          </div>
+          <div className="flex items-center gap-3 bg-white px-4 py-2 rounded-2xl border shadow-sm">
+            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+            <span className="text-sm font-bold text-slate-600">System Live</span>
+          </div>
         </div>
 
-        {/* Stats Cards - Consistent Purple/Indigo Theme */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8 mb-16">
-          {/* Total Events */}
-          <div className="group bg-white/95 backdrop-blur-xl p-8 lg:p-10 rounded-2xl shadow-xl hover:shadow-2xl border border-purple-100 hover:border-purple-200 transform hover:-translate-y-2 transition-all duration-300 overflow-hidden">
-            <div className="flex items-start justify-between">
-              <div className="flex-1">
-                <p className="text-sm font-semibold text-purple-600 uppercase tracking-wide mb-3 flex items-center space-x-2">
-                  <Activity size={18} />
-                  <span>Total Events</span>
-                </p>
-                <p className="text-4xl lg:text-5xl font-bold text-gray-900 mb-1">{stats.totalEvents}</p>
-                <p className="text-sm text-gray-500 font-medium">All your events</p>
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+          {[
+            { label: 'Total Events', value: stats.totalEvents, icon: Activity, color: 'text-purple-600', bgColor: 'bg-purple-50' },
+            { label: 'Published', value: stats.publishedEvents, icon: CheckCircle2, color: 'text-emerald-600', bgColor: 'bg-emerald-50' },
+            { label: 'Pending Apps', value: stats.pendingRequests, icon: Users, color: 'text-amber-600', bgColor: 'bg-amber-50' },
+            { label: 'Volunteers', value: stats.totalVolunteers, icon: Users2, color: 'text-indigo-600', bgColor: 'bg-indigo-50' }
+          ].map((stat, i) => (
+            <div key={i} className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 hover:shadow-md transition-all group">
+              <div className="flex items-center justify-between mb-4">
+                <div className={`${stat.bgColor} p-3 rounded-2xl group-hover:scale-110 transition-transform`}>
+                  <stat.icon size={22} className={stat.color} />
+                </div>
               </div>
-              <div className="w-16 h-16 bg-gradient-to-br from-purple-100 to-indigo-100 rounded-2xl flex items-center justify-center flex-shrink-0 ml-4 group-hover:scale-110 transition-transform duration-300">
-                <Activity size={24} className="text-purple-600" />
-              </div>
+              <p className="text-slate-500 font-bold text-xs uppercase tracking-widest mb-1">{stat.label}</p>
+              <h3 className="text-3xl font-black text-slate-900">{stat.value}</h3>
+            </div>
+          ))}
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-10">
+          {/* Chart Section */}
+          <div className="lg:col-span-2 bg-white p-8 rounded-3xl border border-slate-100 shadow-sm">
+            <h3 className="text-xl font-bold text-slate-900 mb-8 flex items-center gap-2">
+              <Activity className="text-purple-500" size={20} />
+              Events by Category
+            </h3>
+            <div className="h-[300px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={chartData}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12, fontWeight: 600}} />
+                  <YAxis axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12, fontWeight: 600}} />
+                  <Tooltip 
+                    cursor={{fill: '#f8fafc'}}
+                    contentStyle={{borderRadius: '16px', border: 'none', shadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)'}}
+                  />
+                  <Bar dataKey="count" radius={[8, 8, 0, 0]}>
+                    {chartData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
             </div>
           </div>
 
-          {/* Published Events */}
-          <div className="group bg-white/95 backdrop-blur-xl p-8 lg:p-10 rounded-2xl shadow-xl hover:shadow-2xl border border-green-100 hover:border-green-200 transform hover:-translate-y-2 transition-all duration-300 overflow-hidden">
-            <div className="flex items-start justify-between">
-              <div className="flex-1">
-                <p className="text-sm font-semibold text-green-600 uppercase tracking-wide mb-3 flex items-center space-x-2">
-                  <CheckCircle2 size={18} />
-                  <span>Published Events</span>
-                </p>
-                <p className="text-4xl lg:text-5xl font-bold text-gray-900 mb-1">{stats.publishedEvents}</p>
-                <p className="text-sm text-gray-500 font-medium">Live & active</p>
-              </div>
-              <div className="w-16 h-16 bg-gradient-to-br from-green-100 to-emerald-100 rounded-2xl flex items-center justify-center flex-shrink-0 ml-4 group-hover:scale-110 transition-transform duration-300">
-                <CheckCircle2 size={24} className="text-green-600" />
-              </div>
-            </div>
-          </div>
-
-          {/* Draft Events */}
-          <div className="group bg-white/95 backdrop-blur-xl p-8 lg:p-10 rounded-2xl shadow-xl hover:shadow-2xl border border-yellow-100 hover:border-yellow-200 transform hover:-translate-y-2 transition-all duration-300 overflow-hidden">
-            <div className="flex items-start justify-between">
-              <div className="flex-1">
-                <p className="text-sm font-semibold text-yellow-600 uppercase tracking-wide mb-3 flex items-center space-x-2">
-                  <FileText size={18} />
-                  <span>Draft Events</span>
-                </p>
-                <p className="text-4xl lg:text-5xl font-bold text-gray-900 mb-1">{stats.draftEvents}</p>
-                <p className="text-sm text-gray-500 font-medium">Ready to publish</p>
-              </div>
-              <div className="w-16 h-16 bg-gradient-to-br from-yellow-100 to-amber-100 rounded-2xl flex items-center justify-center flex-shrink-0 ml-4 group-hover:scale-110 transition-transform duration-300">
-                <FileText size={24} className="text-yellow-600" />
-              </div>
-            </div>
-          </div>
-
-          {/* Total Volunteers */}
-          <div className="group bg-white/95 backdrop-blur-xl p-8 lg:p-10 rounded-2xl shadow-xl hover:shadow-2xl border border-indigo-100 hover:border-indigo-200 transform hover:-translate-y-2 transition-all duration-300 overflow-hidden">
-            <div className="flex items-start justify-between">
-              <div className="flex-1">
-                <p className="text-sm font-semibold text-indigo-600 uppercase tracking-wide mb-3 flex items-center space-x-2">
-                  <Users size={18} />
-                  <span>Total Volunteers</span>
-                </p>
-                <p className="text-4xl lg:text-5xl font-bold text-gray-900 mb-1">{stats.totalVolunteers}</p>
-                <p className="text-sm text-gray-500 font-medium">Community impact</p>
-              </div>
-              <div className="w-16 h-16 bg-gradient-to-br from-indigo-100 to-purple-100 rounded-2xl flex items-center justify-center flex-shrink-0 ml-4 group-hover:scale-110 transition-transform duration-300">
-                <Users size={24} className="text-indigo-600" />
-              </div>
+          {/* Active Events List */}
+          <div className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm">
+            <h3 className="text-xl font-bold text-slate-900 mb-8 flex items-center gap-2">
+              <Clock className="text-emerald-500" size={20} />
+              Active Now
+            </h3>
+            <div className="space-y-4">
+              {activeEvents.length === 0 ? (
+                <div className="text-center py-10 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+                  <p className="text-slate-400 font-medium italic">No events active right now</p>
+                </div>
+              ) : (
+                activeEvents.map((event) => (
+                  <div key={event.id} className="p-4 rounded-2xl border border-slate-100 hover:border-purple-200 transition-all group">
+                    <h4 className="font-bold text-slate-900 mb-1 group-hover:text-purple-600 transition-colors">{event.title}</h4>
+                    <div className="flex items-center gap-4 text-xs text-slate-500 font-bold uppercase tracking-wider">
+                      <span className="flex items-center gap-1"><Calendar size={12} /> {new Date(event.startDate).toLocaleDateString()}</span>
+                      <span className="flex items-center gap-1 text-emerald-600"><Activity size={12} /> {event.category}</span>
+                    </div>
+                  </div>
+                ))
+              )}
+              <Link to="/organizer/events" className="flex items-center justify-center gap-2 w-full py-4 mt-4 bg-slate-50 hover:bg-slate-100 text-slate-600 font-bold rounded-2xl transition-all text-sm">
+                View All Events <ArrowRight size={16} />
+              </Link>
             </div>
           </div>
         </div>
 
         {/* Quick Actions */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <Link 
             to="/organizer/create-event" 
-            className="group bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white p-10 lg:p-12 rounded-2xl shadow-xl hover:shadow-2xl transform hover:-translate-y-3 transition-all duration-300 text-center flex flex-col items-center justify-center h-full border border-purple-500/20"
+            className="flex items-center gap-5 p-6 bg-purple-600 hover:bg-purple-700 rounded-3xl text-white shadow-lg shadow-purple-200 transition-all hover:-translate-y-1"
           >
-            <Activity size={48} className="mb-6 group-hover:scale-110 transition-transform duration-300 opacity-90" />
-            <h3 className="text-2xl lg:text-3xl font-bold mb-4">Create Event</h3>
-            <p className="text-lg opacity-90 font-medium">Launch your next community impact</p>
+            <div className="p-3 bg-white/20 rounded-2xl whitespace-nowrap">
+              <Activity size={24} />
+            </div>
+            <div>
+              <p className="font-black text-lg leading-tight text-nowrap">Create Event</p>
+              <p className="text-xs font-bold opacity-80 uppercase tracking-widest whitespace-nowrap">Start Impact</p>
+            </div>
           </Link>
 
           <Link 
             to="/organizer/events" 
-            className="group bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white p-10 lg:p-12 rounded-2xl shadow-xl hover:shadow-2xl transform hover:-translate-y-3 transition-all duration-300 text-center flex flex-col items-center justify-center h-full border border-indigo-500/20"
+            className="flex items-center gap-5 p-6 bg-slate-900 hover:bg-slate-800 rounded-3xl text-white shadow-lg shadow-slate-200 transition-all hover:-translate-y-1"
           >
-            <FileText size={48} className="mb-6 group-hover:scale-110 transition-transform duration-300 opacity-90" />
-            <h3 className="text-2xl lg:text-3xl font-bold mb-4">Manage Events</h3>
-            <p className="text-lg opacity-90 font-medium">View & edit your events</p>
+            <div className="p-3 bg-white/10 rounded-2xl whitespace-nowrap">
+              <FileText size={24} />
+            </div>
+            <div>
+              <p className="font-black text-lg leading-tight whitespace-nowrap">Manage Projects</p>
+              <p className="text-xs font-bold opacity-80 uppercase tracking-widest whitespace-nowrap">View List</p>
+            </div>
           </Link>
 
-          <div className="bg-white/95 backdrop-blur-xl p-10 lg:p-12 rounded-2xl shadow-xl border border-purple-100 text-center flex flex-col items-center justify-center h-full">
-            <Users size={48} className="mb-6 text-gray-400" />
-            <h3 className="text-2xl lg:text-3xl font-bold text-gray-900 mb-4">Coming Soon</h3>
-            <p className="text-lg text-gray-600 font-medium">Analytics & Reports</p>
-          </div>
+          <Link 
+            to="/organizer/events" 
+            className="flex items-center gap-5 p-6 bg-white hover:bg-slate-50 rounded-3xl text-slate-900 border border-slate-100 shadow-sm transition-all hover:-translate-y-1"
+          >
+            <div className="p-3 bg-purple-100 rounded-2xl whitespace-nowrap">
+              <Users2 size={24} className="text-purple-600" />
+            </div>
+            <div>
+              <p className="font-black text-lg leading-tight whitespace-nowrap">Volunteers</p>
+              <p className="text-xs font-bold text-slate-500 uppercase tracking-widest whitespace-nowrap">Manage Apps</p>
+            </div>
+          </Link>
         </div>
       </div>
     </div>

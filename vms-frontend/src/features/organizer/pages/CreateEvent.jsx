@@ -4,6 +4,8 @@ import { useApi } from "../../../useApi";
 import { useAuth } from "../../../features/auth/hooks/useAuth";
 
 export default function CreateEvent() {
+  const { user } = useAuth();
+
   const [formData, setFormData] = useState({
     title: "",
     category: "",
@@ -20,6 +22,10 @@ export default function CreateEvent() {
     skillsRequired: "",
     minAge: "",
     genderPreference: "",
+    regOpenDate: new Date().toISOString().split('T')[0],
+    regOpenTime: "09:00",
+    regCloseDate: "",
+    regCloseTime: "18:00",
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -27,7 +33,48 @@ export default function CreateEvent() {
   const { apiCall } = useApi();
 
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setFormData(prev => {
+      const updated = { ...prev, [name]: value };
+      
+      // If start date changes, validate registration dates
+      if (name === 'startDate' && value) {
+        const maxEndDate = getMaxEndDate(value);
+        // If current end date is after the new maximum, clear it
+        if (updated.endDate && updated.endDate > maxEndDate) {
+          updated.endDate = '';
+        }
+        // ✅ Smart Defaults for Manual Registration
+        if (value && !updated.regCloseDate) {
+          const closeDate = new Date(value);
+          closeDate.setDate(closeDate.getDate() - 1);
+          updated.regCloseDate = closeDate.toISOString().split('T')[0];
+        }
+      }
+      
+      return updated;
+    });
+  };
+
+  // Helper function to get today's date in YYYY-MM-DD format
+  const getTodayDate = () => {
+    const today = new Date();
+    return today.toISOString().split('T')[0];
+  };
+
+  // Helper function to get maximum end date (start date + 20 days)
+  const getMaxEndDate = (startDate) => {
+    if (!startDate) return getTodayDate();
+    const start = new Date(startDate);
+    start.setDate(start.getDate() + 20);
+    return start.toISOString().split('T')[0];
+  };
+
+  // Helper function to get maximum allowed date (current year + 3 years)
+  const getMaxDate = () => {
+    const today = new Date();
+    today.setFullYear(today.getFullYear() + 3);
+    return today.toISOString().split('T')[0];
   };
 
   const handleSubmit = async (e) => {
@@ -35,21 +82,12 @@ export default function CreateEvent() {
     setLoading(true);
     setError("");
 
-    const isValidDate = (d) => /^\d{4}-\d{2}-\d{2}$/.test(d);
-
-    if (!isValidDate(formData.startDate)) {
-      setLoading(false);
-      setError("Invalid start date format");
-      return;
-    }
-
-    if (formData.endDate && !isValidDate(formData.endDate)) {
-      setLoading(false);
-      setError("Invalid end date format");
-      return;
-    }
-
     try {
+      // ✅ SAFETY CHECK: Ensure user is logged in
+      if (!user?.userId) {
+         throw new Error("You must be logged in to create an event.");
+      }
+
       if (
         !formData.title ||
         !formData.category ||
@@ -61,54 +99,57 @@ export default function CreateEvent() {
       }
 
       const eventData = {
+        userId: user.userId,
         title: formData.title,
         category: formData.category,
-        locationName: formData.locationName,
-        startDate: formData.startDate,
-        city: formData.city,
-        description: formData.description || null,
-        requiredVolunteers: parseInt(formData.requiredVolunteers),
+        description: formData.description || "",
+        startDate: formData.startDate, 
+        endDate: formData.endDate || null,
         startTime: formData.startTime || null,
         endTime: formData.endTime || null,
-        endDate: formData.endDate || null,
-        address: formData.address || null,
-        area: formData.area || null,
-        skillsRequired: formData.skillsRequired || null,
-        minAge: formData.minAge ? parseInt(formData.minAge) : null,
-        genderPreference: formData.genderPreference || null,
+        locationName: formData.locationName,
+        address: formData.address || "",
+        city: formData.city || "Pune",
+        area: formData.area || "",
+        requiredVolunteers: Number(formData.requiredVolunteers),
+        skillsRequired: formData.skillsRequired || "",
+        minAge: formData.minAge ? Number(formData.minAge) : null,
+        genderPreference: formData.genderPreference || "",
+        registrationOpenDateTime: formData.regOpenDate ? `${formData.regOpenDate}T${formData.regOpenTime || '00:00'}:00` : null,
+        registrationCloseDateTime: formData.regCloseDate ? `${formData.regCloseDate}T${formData.regCloseTime || '00:00'}:00` : null,
       };
 
-      console.log("SENDING:", JSON.stringify(eventData, null, 2));
-
-      await apiCall("/events", {
+      const response = await apiCall("/events", {
         method: "POST",
         body: JSON.stringify(eventData),
       });
 
-      alert("Event created successfully!");
+      alert("Event created successfully! ✅");
       navigate("/organizer/events");
     } catch (err) {
-      console.error("ERROR:", err);
-      setError(err.message || "Failed to create event");
+      console.error("❌ FULL ERROR:", err);
+      // Now acts on the 'message' property sent by my backend fix
+      const errorMsg = err.message || "Please check your input data and try again";
+      setError(errorMsg);
     } finally {
       setLoading(false);
     }
   };
 
+
   const inputClass =
-    "w-full px-4 py-3 bg-white/90 backdrop-blur-sm text-gray-900 border border-purple-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 focus:outline-none transition-all duration-200 hover:border-purple-300 shadow-sm";
+    "w-full px-4 py-3 bg-white/90 backdrop-blur-sm text-gray-900 placeholder-gray-500 border border-purple-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 focus:outline-none transition-all duration-200 hover:border-purple-300 shadow-sm";
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-100 py-12 px-4 sm:px-6 lg:px-8">
+      {/* ... (Rest of your JSX remains the same as provided) ... */}
       <div className="max-w-4xl mx-auto">
-        {/* ✅ BACK BUTTON - Matches Dashboard style */}
         <Link
           to="/organizer/dashboard"
           className="inline-flex items-center px-4 py-2 mb-8 bg-white/90 backdrop-blur-sm rounded-xl hover:bg-white transition-all border border-purple-200 hover:border-purple-300 shadow-sm text-purple-700 font-medium"
         >
           ← Back to Dashboard
         </Link>
-
         <div className="bg-white/95 backdrop-blur-xl shadow-2xl rounded-3xl p-8 border border-purple-200">
           <div className="text-center mb-8">
             <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent mb-4">
@@ -118,14 +159,15 @@ export default function CreateEvent() {
               Fill out all required fields marked with *
             </p>
           </div>
-
           {error && (
             <div className="bg-red-50 border border-red-200 text-red-700 px-6 py-4 rounded-xl mb-6">
               {error}
             </div>
           )}
-
-          <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <form
+            onSubmit={handleSubmit}
+            className="grid grid-cols-1 md:grid-cols-2 gap-6"
+          >
             {/* Basic Info */}
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -142,20 +184,19 @@ export default function CreateEvent() {
                 disabled={loading}
               />
             </div>
-
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Category *
               </label>
               <select
                 name="category"
-                className={`${inputClass} bg-white`}
+                className={`${inputClass} bg-white text-gray-900`}
                 value={formData.category}
                 onChange={handleChange}
                 required
                 disabled={loading}
               >
-                <option value="">Select Category</option>
+                 <option value="">Select Category</option>
                 <option value="Cleanup">Cleanup</option>
                 <option value="Education">Education</option>
                 <option value="Health">Health</option>
@@ -163,7 +204,6 @@ export default function CreateEvent() {
                 <option value="Awareness">Awareness Program</option>
               </select>
             </div>
-
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Description
@@ -178,7 +218,6 @@ export default function CreateEvent() {
                 disabled={loading}
               />
             </div>
-
             {/* Date & Time */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -190,11 +229,12 @@ export default function CreateEvent() {
                 className={inputClass}
                 value={formData.startDate}
                 onChange={handleChange}
+                min={getTodayDate()}
+                max={getMaxDate()}
                 required
                 disabled={loading}
               />
             </div>
-
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 End Date
@@ -205,10 +245,12 @@ export default function CreateEvent() {
                 className={inputClass}
                 value={formData.endDate}
                 onChange={handleChange}
-                disabled={loading}
+                min={formData.startDate || getTodayDate()}
+                max={formData.startDate ? getMaxEndDate(formData.startDate) : getMaxDate()}
+                disabled={loading || !formData.startDate}
+                title={!formData.startDate ? "Please select start date first" : "Maximum 20 days from start date"}
               />
             </div>
-
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Start Time
@@ -222,7 +264,6 @@ export default function CreateEvent() {
                 disabled={loading}
               />
             </div>
-
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 End Time
@@ -236,7 +277,71 @@ export default function CreateEvent() {
                 disabled={loading}
               />
             </div>
-
+            
+            {/* Registration Window - Restored Manual Controls */}
+            <div className="md:col-span-2 mt-4 pt-4 border-t border-purple-100">
+              <h3 className="text-lg font-semibold text-purple-700 mb-4">Registration Window</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Registration Open Date
+                  </label>
+                  <input
+                    name="regOpenDate"
+                    type="date"
+                    className={inputClass}
+                    value={formData.regOpenDate}
+                    onChange={handleChange}
+                    min={getTodayDate()}
+                    max={formData.startDate || getMaxDate()}
+                    disabled={loading}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Registration Open Time
+                  </label>
+                  <input
+                    name="regOpenTime"
+                    type="time"
+                    className={inputClass}
+                    value={formData.regOpenTime}
+                    onChange={handleChange}
+                    disabled={loading}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Registration Close Date *
+                  </label>
+                  <input
+                    name="regCloseDate"
+                    type="date"
+                    className={inputClass}
+                    value={formData.regCloseDate}
+                    onChange={handleChange}
+                    min={formData.regOpenDate || getTodayDate()}
+                    max={formData.startDate || getMaxDate()}
+                    required
+                    disabled={loading}
+                  />
+                  <p className="mt-1 text-xs text-gray-500">Must be on or before event start date</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Registration Close Time
+                  </label>
+                  <input
+                    name="regCloseTime"
+                    type="time"
+                    className={inputClass}
+                    value={formData.regCloseTime}
+                    onChange={handleChange}
+                    disabled={loading}
+                  />
+                </div>
+              </div>
+            </div>
             {/* Location */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -253,7 +358,6 @@ export default function CreateEvent() {
                 disabled={loading}
               />
             </div>
-
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Full Address
@@ -268,7 +372,6 @@ export default function CreateEvent() {
                 disabled={loading}
               />
             </div>
-
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 City
@@ -282,7 +385,6 @@ export default function CreateEvent() {
                 disabled={loading}
               />
             </div>
-
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Area/Zone
@@ -297,7 +399,6 @@ export default function CreateEvent() {
                 disabled={loading}
               />
             </div>
-
             {/* Volunteer Requirements */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -315,7 +416,6 @@ export default function CreateEvent() {
                 disabled={loading}
               />
             </div>
-
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Skills Required (optional)
@@ -330,7 +430,6 @@ export default function CreateEvent() {
                 disabled={loading}
               />
             </div>
-
             <button
               type="submit"
               disabled={loading}

@@ -1,97 +1,131 @@
 // src/features/admin/layout/DashboardLayout.jsx
-import React from 'react';
-import { Outlet, Link, useNavigate } from 'react-router-dom';
+// ✅ FIXED: Sidebar toggle works on DESKTOP + MOBILE
+// ✅ Sidebar hidden by default on all devices
+
+import React, { useState, useCallback } from 'react';
+import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../auth/hooks/useAuth';
+import { X, Menu, User } from 'lucide-react';
 
 export default function DashboardLayout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // ✅ Sidebar state (works for all screen sizes)
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  const toggleSidebar = useCallback((e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsSidebarOpen((prev) => !prev);
+  }, []);
 
   const handleLogout = () => {
     logout();
     navigate('/');
   };
 
+  const navItems = [
+    { name: 'Dashboard', href: '/admin/dashboard', iconPath: "M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6", color: "text-indigo-500" },
+    { name: 'Events', href: '/admin/events', iconPath: "M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z", color: "text-emerald-500" },
+    { name: 'Volunteers', href: '/admin/volunteers', iconPath: "M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z", color: "text-blue-500" },
+    { name: 'Organizers', href: '/admin/organizers', iconPath: "M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a1.875 1.875 0 01-2.652 0L6.854 12.312a1.875 1.875 0 112.653-2.653l5.355 5.355z", color: "text-purple-500" },
+    { name: 'Events Approval', href: '/admin/events-approval', iconPath: "M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z", color: "text-amber-500" },
+    { name: 'Reports', href: '/admin/reports', iconPath: "M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z", color: "text-orange-500" },
+    { name: 'Complaints', href: '/admin/complaints', iconPath: "M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z", color: "text-red-500" },
+    { name: 'Settings', href: '/admin/settings', iconPath: "M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37z", color: "text-gray-500" },
+  ];
+
+  const isActive = (href) =>
+    location.pathname === href ||
+    (href === '/admin/events' && location.pathname.includes('/admin/events')) ||
+    (href === '/admin/events-approval' && location.pathname.includes('events-approval'));
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Admin Header */}
-      <header className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <Link to="/admin/dashboard" className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                Admin Panel
-              </Link>
-              <span className="text-sm bg-blue-100 text-blue-800 px-3 py-1 rounded-full font-medium">
-                {user?.name}
-              </span>
-            </div>
-            <div className="flex items-center space-x-4">
-              <Link
-                to="/admin/events"
-                className="text-gray-700 hover:text-blue-600 font-medium px-4 py-2 rounded-lg transition-colors"
-              >
-                Events
-              </Link>
-              <button
-                onClick={handleLogout}
-                className="bg-red-600 hover:bg-red-700 text-white font-medium px-6 py-2 rounded-xl transition-all duration-200"
-              >
-                Logout
-              </button>
-            </div>
+    <div className="h-screen w-screen bg-gradient-to-br from-gray-50 to-indigo-50 overflow-hidden flex flex-col">
+      {/* HEADER */}
+      <header className="bg-white/95 backdrop-blur-xl shadow-sm border-b border-indigo-100/30 h-16 flex items-center justify-between px-4 lg:px-6 z-[70]">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={toggleSidebar}
+            className="p-2 rounded-lg hover:bg-indigo-100 transition-all w-10 h-10 flex items-center justify-center"
+          >
+            {isSidebarOpen ? <X className="w-5 h-5 text-indigo-600" /> : <Menu className="w-5 h-5 text-indigo-600" />}
+          </button>
+
+          <Link
+            to="/admin/dashboard"
+            className="text-xl font-bold bg-gradient-to-r from-indigo-600 via-purple-600 to-emerald-600 bg-clip-text text-transparent"
+          >
+            Admin Panel
+          </Link>
+        </div>
+
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-xl shadow-sm border border-indigo-100">
+            <User className="w-4 h-4 text-indigo-600" />
+            <span className="text-sm font-bold text-gray-900 hidden sm:block capitalize">
+              {user?.name || 'Admin'}
+            </span>
           </div>
+
+          <button
+            onClick={handleLogout}
+            className="bg-gradient-to-r from-red-500 to-rose-600 text-white font-semibold px-4 py-2 rounded-xl shadow-lg"
+          >
+            Logout
+          </button>
         </div>
       </header>
 
-      {/* Admin Sidebar */}
-      <div className="flex">
-        <aside className="w-64 bg-white border-r border-gray-200 shadow-sm">
-          <nav className="mt-8 px-4">
-            <Link
-              to="/admin/dashboard"
-              className="flex items-center px-4 py-3 text-gray-700 rounded-lg hover:bg-blue-50 hover:text-blue-600 font-medium mb-2 transition-all duration-200"
-            >
-              <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-              </svg>
-              Dashboard
-            </Link>
+      {/* BODY */}
+      <div className="flex flex-1 relative overflow-hidden">
+        {/* OVERLAY (mobile only) */}
+        {isSidebarOpen && (
+          <div
+            className="fixed inset-0 bg-black/50 z-[60] lg:hidden"
+            onClick={() => setIsSidebarOpen(false)}
+          />
+        )}
 
-            <Link
-              to="/admin/events"
-              className="flex items-center px-4 py-3 text-gray-700 rounded-lg hover:bg-blue-50 hover:text-blue-600 font-medium mb-2 transition-all duration-200"
-            >
-              <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-              Events
-            </Link>
-
-            <Link
-              to="/admin/users"
-              className="flex items-center px-4 py-3 text-gray-700 rounded-lg hover:bg-blue-50 hover:text-blue-600 font-medium transition-all duration-200"
-            >
-              <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-              </svg>
-              Users
-            </Link>
-
-            <Link
-              to="/admin/reports"
-              className="flex items-center px-4 py-3 text-gray-700 rounded-lg hover:bg-blue-50 hover:text-blue-600 font-medium transition-all duration-200"
-            >
-              <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-              </svg>
-              Reports
-            </Link>
+        {/* SIDEBAR (desktop + mobile toggle) */}
+        <aside
+          className={`
+            fixed inset-y-0 left-0 z-[65] w-72 
+            bg-white/95 backdrop-blur-xl shadow-2xl border-r
+            transform transition-transform duration-300
+            ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+          `}
+        >
+          <nav className="h-full p-4 pt-6 mt-15 space-y-3">
+            {navItems.map((item) => (
+              <Link
+                key={item.name}
+                to={item.href}
+                onClick={() => setIsSidebarOpen(false)}
+                className={`flex items-center px-4 py-3 rounded-xl font-semibold transition-all
+                  ${isActive(item.href)
+                    ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white'
+                    : 'text-gray-700 hover:bg-indigo-50'}
+                `}
+              >
+                <svg
+                  className={`w-5 h-5 mr-3 ${item.color} ${isActive(item.href) ? 'text-white' : ''}`}
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d={item.iconPath} />
+                </svg>
+                {item.name}
+              </Link>
+            ))}
           </nav>
         </aside>
 
-        {/* Main Content */}
-        <main className="flex-1 p-8">
+        <main className="flex-1 overflow-auto p-6 lg:p-8">
           <Outlet />
         </main>
       </div>

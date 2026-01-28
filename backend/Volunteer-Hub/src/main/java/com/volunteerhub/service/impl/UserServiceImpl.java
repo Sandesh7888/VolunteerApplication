@@ -14,6 +14,7 @@ import java.util.List;
 public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
+    private final com.volunteerhub.repository.EventRepository eventRepository;
     private final PasswordEncoder passwordEncoder;
 
     @Override
@@ -22,6 +23,11 @@ public class UserServiceImpl implements UserService {
             throw new RuntimeException("Email already exists");
         }
         user.setPassword(passwordEncoder.encode(user.getPassword()));
+
+        // Generate unique VMS ID
+        String prefix = user.getRole() == User.Role.VOLUNTEER ? "VOL-" : "ORG-";
+        user.setVmsId(prefix + System.currentTimeMillis() % 1000000);
+
         return userRepository.save(user);
     }
 
@@ -49,13 +55,24 @@ public class UserServiceImpl implements UserService {
     @Override
     public User updateUser(Long id, User updatedUser) {
         User user = getUserById(id);
-        user.setName(updatedUser.getName());
-        user.setEmail(updatedUser.getEmail());
-        user.setNumber(updatedUser.getNumber());
-        user.setRole(updatedUser.getRole());
-        if (updatedUser.getPassword() != null && !updatedUser.getPassword().isEmpty()) {
+
+        if (updatedUser.getName() != null)
+            user.setName(updatedUser.getName());
+        if (updatedUser.getNumber() != null)
+            user.setNumber(updatedUser.getNumber());
+
+        // Preserve vmsId if not present
+        if (user.getVmsId() == null) {
+            String prefix = user.getRole() == User.Role.VOLUNTEER ? "VOL-" : "ORG-";
+            user.setVmsId(prefix + System.currentTimeMillis() % 1000000);
+        }
+
+        // Only update password if a new one is explicitly provided
+        // And ensure we don't re-hash an empty string or null
+        if (updatedUser.getPassword() != null && !updatedUser.getPassword().trim().isEmpty()) {
             user.setPassword(passwordEncoder.encode(updatedUser.getPassword()));
         }
+
         return userRepository.save(user);
     }
 
@@ -67,5 +84,17 @@ public class UserServiceImpl implements UserService {
     @Override
     public List<User> getUsersByRole(User.Role role) {
         return userRepository.findByRole(role);
+    }
+
+    @Override
+    public java.util.Map<String, Object> getOrganizerDetails(Long id) {
+        User user = getUserById(id);
+        if (user.getRole() != User.Role.ORGANIZER) {
+            throw new RuntimeException("User is not an organizer");
+        }
+        List<com.volunteerhub.model.Event> events = eventRepository.findByOrganizer(user);
+        return java.util.Map.of(
+                "organizer", user,
+                "events", events);
     }
 }

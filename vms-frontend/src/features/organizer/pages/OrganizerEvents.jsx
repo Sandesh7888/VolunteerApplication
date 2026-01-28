@@ -1,36 +1,56 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useApi } from "../../../useApi"; 
-import { Plus, Search, X, Edit2, Trash2, Calendar, MapPin, Users, Tag, Loader2 } from 'lucide-react';
+import { useAuth } from "../../../features/auth/hooks/useAuth";
+import { Plus, Search, X, Eye, Edit2, Trash2, Calendar, MapPin, Users, Tag, Loader2, Users2, MoreVertical, CheckCircle, Clock } from 'lucide-react';
+// import { Plus, Search, X, Eye, Edit2, Trash2, Calendar, MapPin, Users, Tag, Loader2, Users2, MoreVertical, CheckCircle, Clock } from 'lucide-react';
+import { formatTime, getEventStatus } from '../../../utils/formatters';
+import { sortEvents } from '../../../utils/sorters';
 
 export default function OrganizerEvents() {
+  const { user } = useAuth();
   const [events, setEvents] = useState([]);
   const [filteredEvents, setFilteredEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [searchOpen, setSearchOpen] = useState(false);
+  const [pendingCounts, setPendingCounts] = useState({});
   const { apiCall } = useApi();
   const navigate = useNavigate();
 
   useEffect(() => {
-    fetchMyEvents();
-  }, []);
+    if (user?.userId) {
+        fetchMyEvents();
+    }
+  }, [user?.userId]);
 
   useEffect(() => {
     const filtered = events.filter(event =>
       event.title.toLowerCase().includes(searchTerm.toLowerCase())
     );
-    setFilteredEvents(filtered);
+    setFilteredEvents(sortEvents(filtered));
   }, [searchTerm, events]);
 
   const fetchMyEvents = async () => {
     try {
       setLoading(true);
       setError('');
-      const eventsData = await apiCall("/events/myevents");
+      const eventsData = await apiCall(`/events/myevents?userId=${user.userId}`);
       setEvents(eventsData);
-      setFilteredEvents(eventsData);
+      setFilteredEvents(sortEvents(eventsData));
+      
+      const counts = {};
+      for (const event of eventsData) {
+        try {
+          const volunteers = await apiCall(`/events/${event.id}/volunteers`);
+          const pendingCount = volunteers.filter(v => v.status === 'PENDING').length;
+          counts[event.id] = pendingCount;
+        } catch (err) {
+          counts[event.id] = 0;
+        }
+      }
+      setPendingCounts(counts);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -38,11 +58,22 @@ export default function OrganizerEvents() {
     }
   };
 
+  const handleApproveEvent = async (eventId) => {
+    try {
+      await apiCall(`/events/${eventId}/publish`, { method: 'PATCH' });
+      await fetchMyEvents();
+      alert("Event published successfully! ✅");
+    } catch (err) {
+      console.error("Failed to approve event:", err);
+      alert("Failed to publish event.");
+    }
+  };
+
   const handleDelete = async (eventId) => {
     if (!window.confirm('Delete this event permanently?')) return;
-
     try {
-      
+      if (!user?.userId) return;
+      await apiCall(`/events/${eventId}?userId=${user.userId}`, { method: 'DELETE' });
       await fetchMyEvents();
     } catch (err) {
       window.location.reload();
@@ -56,15 +87,21 @@ export default function OrganizerEvents() {
     setSearchOpen(!searchOpen);
   };
 
-  const getStatusColor = (status) => {
+  // Status - ONLY TEXT COLOR, NO BORDER/BG
+  const getStatusStyle = (status) => {
     switch(status) {
-      case 'PUBLISHED': return 'from-green-500 to-emerald-600 text-white';
-      case 'DRAFT': return 'from-yellow-500 to-amber-600 text-gray-900';
-      case 'COMPLETED': return 'from-blue-500 to-indigo-600 text-white';
-      case 'CANCELLED': return 'from-gray-500 to-gray-600 text-white';
-      default: return 'from-gray-500 to-gray-600 text-white';
+      case 'LIVE': return 'text-rose-600 font-bold animate-pulse';
+      case 'UPCOMING': return 'text-purple-600 font-bold';
+      case 'PUBLISHED': return 'text-green-600 font-bold';
+      case 'DRAFT': return 'text-yellow-600 font-bold';
+      case 'COMPLETED': return 'text-slate-600 font-bold';
+      case 'CANCELLED': return 'text-red-500 font-bold line-through';
+      case 'PENDING_APPROVAL': return 'text-orange-600 font-bold';
+      case 'REJECTED': return 'text-red-600 font-bold';
+      default: return 'text-gray-600 font-bold';
     }
   };
+
 
   if (loading) {
     return (
@@ -78,155 +115,233 @@ export default function OrganizerEvents() {
   }
 
   return (
-    <div className="p-8 bg-gradient-to-br from-purple-50 to-indigo-100 min-h-screen">
+    <div className="p-4 sm:p-6 lg:p-8 bg-gradient-to-br from-purple-50 to-indigo-100 min-h-screen">
       <div className="max-w-7xl mx-auto">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-12 gap-6">
+        {/* Header */}
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-6 lg:mb-12 gap-4 lg:gap-6">
           <div>
-            <h1 className="text-4xl lg:text-5xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent mb-4 leading-tight">
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent mb-2 leading-tight">
               My Events
             </h1>
-            <p className="text-xl text-gray-700">Manage all your created events</p>
+            <p className="text-lg sm:text-xl text-gray-700">Manage all your created events</p>
           </div>
           
-          {/* ✅ SEARCH + CREATE BUTTONS SIDE BY SIDE */}
-          <div className="flex items-center space-x-4 self-start lg:self-auto">
-            {/* Search Toggle */}
+          <div className="flex items-center space-x-2 sm:space-x-4 flex-wrap gap-2">
             {searchOpen ? (
-              <div className="relative w-80">
-                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <div className="relative w-64 sm:w-80 flex-shrink-0">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                 <input
                   type="text"
-                  placeholder="Search events by title..."
-                  className="w-full pl-12 pr-12 py-4 bg-white/95 backdrop-blur-sm border border-purple-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 focus:outline-none transition-all duration-200 shadow-sm text-gray-900 placeholder-gray-500 text-lg"
+                  placeholder="Search events..."
+                  className="w-full pl-10 pr-10 py-3 bg-white/95 backdrop-blur-sm border border-purple-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 focus:outline-none transition-all duration-200 shadow-sm"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   autoFocus
                 />
                 <button
                   onClick={toggleSearch}
-                  className="absolute right-4 top-1/2 transform -translate-y-1/2 p-1 hover:bg-gray-200 rounded-full transition-all duration-200"
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 p-1 hover:bg-gray-200 rounded-full"
                 >
-                  <X size={20} className="text-gray-500 hover:text-gray-700" />
+                  <X size={18} className="text-gray-500 hover:text-gray-700" />
                 </button>
               </div>
             ) : (
               <button
                 onClick={toggleSearch}
-                className="w-14 h-14 flex-shrink-0 bg-white/90 backdrop-blur-sm border-2 border-purple-200 hover:border-purple-400 rounded-2xl shadow-lg hover:shadow-xl hover:bg-white transition-all duration-200 flex items-center justify-center group"
-                title="Search events"
+                className="w-12 h-12 sm:w-14 sm:h-14 flex-shrink-0 bg-white/90 backdrop-blur-sm border-2 border-purple-200 hover:border-purple-400 rounded-2xl shadow-lg hover:shadow-xl hover:bg-white transition-all duration-200 flex items-center justify-center"
               >
-                <Search size={20} className="text-purple-600 group-hover:scale-110 transition-transform duration-200" />
+                <Search size={18} className="text-purple-600" />
               </button>
             )}
             
-            {/* Create Button */}
             <Link 
               to="/organizer/create-event" 
-              className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white px-8 py-4 rounded-xl font-bold text-lg shadow-xl hover:shadow-2xl transform hover:-translate-y-1 transition-all duration-200 flex items-center space-x-3 flex-shrink-0"
+              className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white px-6 py-3 rounded-xl font-bold text-base shadow-xl hover:shadow-2xl hover:-translate-y-1 transition-all duration-200 flex items-center space-x-2 min-w-[140px] justify-center"
             >
-              <Plus size={20} className="group-hover:scale-110 transition-transform duration-200" />
-              <span>Create New Event</span>
+              <Plus size={18} />
+              <span>Create Event</span>
             </Link>
           </div>
         </div>
 
         {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-6 py-4 rounded-xl mb-8 shadow-sm">
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-4 rounded-xl mb-6 shadow-sm">
             {error}
           </div>
         )}
 
         {filteredEvents.length === 0 ? (
-          <div className="text-center py-32">
-            <div className="w-32 h-32 bg-gradient-to-r from-purple-400 to-indigo-400 rounded-2xl flex items-center justify-center mx-auto mb-8 shadow-xl">
-              <Calendar className="w-16 h-16 text-white" />
+          <div className="text-center py-20">
+            <div className="w-24 h-24 sm:w-32 sm:h-32 bg-gradient-to-r from-purple-400 to-indigo-400 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-xl">
+              <Calendar className="w-12 h-12 sm:w-16 sm:h-16 text-white" />
             </div>
-            <h3 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-6">No Events {searchTerm ? 'Match' : 'Created'}</h3>
-            <p className="text-xl text-gray-600 mb-10 max-w-md mx-auto">
-              {searchTerm 
-                ? `No events found matching "${searchTerm}"` 
-                : "Start by creating your first community event"
-              }
+            <h3 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-4">No Events {searchTerm ? 'Match' : 'Created'}</h3>
+            <p className="text-lg text-gray-600 mb-8 max-w-md mx-auto">
+              {searchTerm ? `No events found matching "${searchTerm}"` : "Start by creating your first community event"}
             </p>
             <Link 
               to="/organizer/create-event" 
-              className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white px-12 py-4 rounded-xl font-bold text-xl shadow-xl hover:shadow-2xl transform hover:-translate-y-1 transition-all duration-200 inline-flex items-center space-x-2"
+              className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white px-8 py-3 rounded-xl font-bold text-lg shadow-xl hover:shadow-2xl hover:-translate-y-1 transition-all duration-200 inline-flex items-center space-x-2"
             >
-              <Plus size={20} />
+              <Plus size={18} />
               <span>{searchTerm ? 'Try Different Search' : 'Launch First Event'}</span>
             </Link>
           </div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-6 lg:gap-8">
-            {filteredEvents.map((event) => (
-              <div key={event.id} className="group bg-white/95 backdrop-blur-xl rounded-2xl shadow-xl hover:shadow-2xl border border-purple-100 hover:border-purple-300 overflow-hidden transform hover:-translate-y-2 transition-all duration-300">
-                <div className="p-8">
-                  <div className="flex items-center justify-between mb-6">
-                    <span className={`px-4 py-2 rounded-xl font-bold text-sm uppercase tracking-wide shadow-md ${getStatusColor(event.status)}`}>
-                      {event.status}
-                    </span>
-                    <div className="flex space-x-2">
-                      <button 
-                        onClick={() => navigate(`/organizer/events/${event.id}/edit`)} 
-                        className="p-2.5 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-xl hover:shadow-lg hover:shadow-blue-500/25 transform hover:scale-105 transition-all duration-200"
-                        title="Edit Event"
-                      >
-                        <Edit2 size={18} />
-                      </button>
-                      <button 
-                        onClick={() => handleDelete(event.id)} 
-                        className="p-2.5 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white rounded-xl hover:shadow-lg hover:shadow-red-500/25 transform hover:scale-105 transition-all duration-200"
-                        title="Delete Event"
-                      >
-                        <Trash2 size={18} />
-                      </button>
-                    </div>
-                  </div>
+          <div className="bg-white/80 backdrop-blur-xl rounded-2xl border border-purple-100 shadow-2xl overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[1000px] table-auto">
+                <thead className="sticky top-0 bg-gradient-to-r from-purple-600/10 to-indigo-600/10 border-b-2 border-purple-200">
+                  <tr>
+                    <th className="px-6 py-4 text-left text-sm font-bold text-gray-900 uppercase tracking-wide w-[30%]">Event</th>
+                    <th className="px-4 py-4 text-left text-sm font-bold text-gray-900 uppercase tracking-wide w-[12%]">Date & Time</th>
+                    <th className="px-4 py-4 text-left text-sm font-bold text-gray-900 uppercase tracking-wide w-[15%]">Location</th>
+                    <th className="px-4 py-4 text-left text-sm font-bold text-gray-900 uppercase tracking-wide w-[10%] text-center">Volunteers</th>
+                    <th className="px-4 py-4 text-left text-sm font-bold text-gray-900 uppercase tracking-wide w-[10%]">Category</th>
+                    <th className="px-4 py-4 text-left text-sm font-bold text-gray-900 uppercase tracking-wide w-[10%]">Status</th>
+                    <th className="px-6 py-4 text-right text-sm font-bold text-gray-900 uppercase tracking-wide w-[13%]">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-purple-100">
+                  {filteredEvents.map((event) => (
+                    <tr key={event.id} className="hover:bg-gradient-to-r hover:from-purple-50/50 hover:to-indigo-50/50 transition-all duration-200 bg-white/95 border-b border-purple-50">
+                      {/* Event Title */}
+                      <td className="px-3 sm:px-4 lg:px-6 py-4">
+                        <h3 className="text-sm sm:text-base lg:text-xl font-bold text-gray-900 truncate">
+                          {event.title}
+                        </h3>
+                      </td>
 
-                  <h3 className="text-2xl lg:text-3xl font-bold text-gray-900 mb-4 leading-tight group-hover:text-purple-600 transition-colors duration-200">
-                    {event.title}
-                  </h3>
-                  
-                  <p className="text-gray-600 text-lg leading-relaxed mb-8 line-clamp-3">{event.description}</p>
-                  
-                  <div className="grid grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <div className="flex items-center text-sm font-bold text-purple-600 uppercase tracking-wide space-x-1">
-                        <Calendar size={16} />
-                        <span>Date</span>
-                      </div>
-                      <div className="text-xl font-bold text-gray-900">
-                        {event.startDate ? new Date(event.startDate).toLocaleDateString('en-IN') : 'TBD'}
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <div className="flex items-center text-sm font-bold text-purple-600 uppercase tracking-wide space-x-1">
-                        <MapPin size={16} />
-                        <span>Location</span>
-                      </div>
-                      <div className="text-xl font-bold text-gray-900">{event.locationName}</div>
-                    </div>
-                    <div className="space-y-2">
-                      <div className="flex items-center text-sm font-bold text-purple-600 uppercase tracking-wide space-x-1">
-                        <Users size={16} />
-                        <span>Volunteers</span>
-                      </div>
-                      <div className="text-xl font-bold text-gray-900">{event.currentVolunteers || 0}/{event.requiredVolunteers || 0}</div>
-                    </div>
-                    <div className="space-y-2">
-                      <div className="flex items-center text-sm font-bold text-purple-600 uppercase tracking-wide space-x-1">
-                        <Tag size={16} />
-                        <span>Category</span>
-                      </div>
-                      <div className="text-xl font-bold capitalize text-gray-900">{event.category}</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
+                      {/* Date & Time */}
+                      <td className="px-3 sm:px-4 py-4">
+                        <div className="flex flex-col gap-1">
+                          <div className="flex items-center space-x-1 text-xs sm:text-sm font-bold text-gray-900">
+                            <Calendar size={14} className="text-purple-600 flex-shrink-0" />
+                            <span>
+                              {(event.startDate || event.dateTime) && (event.startDate !== 'null' || event.dateTime !== 'null') 
+                                ? new Date(event.startDate || event.dateTime).toLocaleDateString('en-IN') 
+                                : 'TBD'
+                              }
+                            </span>
+                          </div>
+                          <div className="flex items-center space-x-1 text-[10px] sm:text-xs font-medium text-gray-500">
+                            <Clock size={12} className="text-indigo-400 flex-shrink-0" />
+                            <span>{formatTime(event.startTime)} - {formatTime(event.endTime)}</span>
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* Location */}
+                      <td className="px-3 sm:px-4 py-4">
+                        <div className="flex items-center space-x-1 text-xs sm:text-sm font-bold text-gray-900 truncate">
+                          <MapPin size={14} className="text-purple-600 flex-shrink-0" />
+                          <span>{event.locationName || 'TBD'}</span>
+                        </div>
+                      </td>
+
+                      {/* Volunteers */}
+                      <td className="px-3 sm:px-4 py-4">
+                        <div className="flex items-center space-x-1 text-xs sm:text-sm font-bold text-gray-900">
+                          <Users size={14} className="text-purple-600 flex-shrink-0" />
+                          <span>{(event.currentVolunteers || 0)}/{(event.requiredVolunteers || 0)}</span>
+                        </div>
+                      </td>
+
+                      {/* Category */}
+                      <td className="px-3 sm:px-4 py-4">
+                        <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded-full text-xs font-bold uppercase tracking-wide">
+                          {event.category || 'General'}
+                        </span>
+                      </td>
+
+                      {/* Status - COMPUTED */}
+                      <td className="px-3 sm:px-4 py-4">
+                        {(() => {
+                           const status = getEventStatus(
+                             event.startDate, 
+                             event.endDate, 
+                             event.startTime, 
+                             event.endTime, 
+                             event.status
+                           );
+                           return (
+                             <span className={`px-2 py-1 rounded-md text-xs font-bold uppercase tracking-wide ${getStatusStyle(status)}`}>
+                               {status?.replace('_', ' ') || 'Unknown'}
+                             </span>
+                           );
+                        })()}
+                      </td>
+
+                      {/* STABLE HOVER MENU - NO ROW MOVEMENT */}
+                      {/* ACTIONS - INLINE BUTTONS */}
+                      <td className="px-3 sm:px-4 lg:px-6 py-4 text-right">
+                        <div className="flex items-center justify-end space-x-2">
+                          {event.status === 'PENDING_APPROVAL' && (
+                            <button 
+                              onClick={() => handleApproveEvent(event.id)}
+                              className="p-2 text-green-600 hover:text-green-800 hover:bg-green-50 rounded-lg transition-colors duration-200"
+                              title="Publish Event"
+                            >
+                              <CheckCircle size={18} />
+                            </button>
+                          )}
+                          <Link 
+                            to={`/organizer/events/${event.id}`}
+                            className="p-2 text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 rounded-lg transition-colors duration-200"
+                            title="View Details"
+                          >
+                            <Eye size={18} />
+                          </Link>
+                          <Link 
+                            to={`/organizer/events/${event.id}/volunteers`}
+                            className="relative p-2 text-emerald-600 hover:text-emerald-800 hover:bg-emerald-50 rounded-lg transition-colors duration-200"
+                            title="Manage Volunteers"
+                          >
+                            <Users2 size={18} />
+                            {pendingCounts[event.id] > 0 && (
+                              <span className="absolute -top-1 -right-1 flex h-4 w-4">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-4 w-4 bg-red-500 text-[10px] text-white items-center justify-center font-bold">
+                                  {pendingCounts[event.id]}
+                                </span>
+                              </span>
+                            )}
+                          </Link>                          
+                          <Link 
+                            to={`/organizer/events/${event.id}/edit`}
+                            className="p-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-colors duration-200"
+                            title="Edit Event"
+                          >
+                            <Edit2 size={18} />
+                          </Link>
+                          
+                          <button 
+                            onClick={() => handleDelete(event.id)}
+                            className="p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition-colors duration-200"
+                            title="Delete Event"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </div>
+
+      <style>{`
+        .scrollbar-hide::-webkit-scrollbar {
+          display: none;
+        }
+        .scrollbar-hide {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+      `}</style>
     </div>
   );
 }

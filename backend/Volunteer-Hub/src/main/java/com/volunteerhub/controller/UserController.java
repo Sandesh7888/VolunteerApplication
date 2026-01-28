@@ -11,6 +11,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/users")
 @RequiredArgsConstructor
+@CrossOrigin(origins = { "http://localhost:5173", "http://127.0.0.1:5173" }, allowCredentials = "true")
 public class UserController {
 
     private final UserService userService;
@@ -36,9 +37,9 @@ public class UserController {
     }
 
     @DeleteMapping("/{id}")
-    public String deleteUser(@PathVariable Long id) {
+    public org.springframework.http.ResponseEntity<Map<String, String>> deleteUser(@PathVariable Long id) {
         userService.deleteUser(id);
-        return "User deleted successfully";
+        return org.springframework.http.ResponseEntity.ok(Map.of("message", "User deleted successfully"));
     }
 
     @GetMapping("/role/{role}")
@@ -53,4 +54,8 @@ public class UserController {
         return Map.of("organizers", organizers, "volunteers", volunteers);
     }
 
+    @GetMapping("/organizer/{id}/details")
+    public Map<String, Object> getOrganizerDetails(@PathVariable Long id) {
+        return userService.getOrganizerDetails(id);
+    }
 }

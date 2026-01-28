@@ -2,7 +2,10 @@
 import React, { useState } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../auth/hooks/useAuth';
-import { Menu, X, LayoutDashboard, Calendar, Plus, LogOut } from 'lucide-react';
+import { 
+  Menu, X, LayoutDashboard, Plus, Calendar, Users, 
+  CheckSquare, FileText, MessageCircle, User, Settings, LogOut 
+} from 'lucide-react';
 
 export default function OrganizerDashboardLayout() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -11,9 +14,15 @@ export default function OrganizerDashboardLayout() {
   const location = useLocation();
 
   const navItems = [
-    { name: 'Dashboard', href: '/organizer/dashboard', icon: LayoutDashboard },
-    { name: 'My Events', href: '/organizer/events', icon: Calendar },
-    { name: 'Create Event', href: '/organizer/create-event', icon: Plus },
+    { name: 'Dashboard', href: '/organizer/dashboard', icon: LayoutDashboard }, // → Overview
+    { name: 'Create Event', href: '/organizer/create-event', icon: Plus }, // → Stats
+    { name: 'My Events', href: '/organizer/events', icon: Calendar }, // → Event List
+    { name: 'Volunteers', href: '/organizer/volunteers', icon: Users }, // → Progress
+    { name: 'Attendance', href: '/organizer/attendance', icon: CheckSquare },
+    { name: 'Reports', href: '/organizer/reports', icon: FileText },
+    { name: 'Messages', href: '/organizer/messages', icon: MessageCircle },
+    { name: 'Profile', href: '/organizer/profile', icon: User },
+    { name: 'Settings', href: '/organizer/settings', icon: Settings },
   ];
 
   const handleLogout = () => {
@@ -46,8 +55,8 @@ export default function OrganizerDashboardLayout() {
           {/* RIGHT: User + Logout */}
           <div className="flex items-center space-x-3">
             <div className="flex items-center space-x-2">
-              <span className="font-medium text-gray-900 hidden lg:block">{user?.name}</span>
-              <span className="px-3 py-1 bg-purple-100 text-purple-800 text-xs font-bold rounded-full">
+              <span className="font-bold text-gray-900 hidden lg:block capitalize">{user?.name}</span>
+              <span className="px-3 py-1 bg-purple-100 text-purple-800 text-xs font-bold rounded-full border border-purple-200">
                 Organizer
               </span>
             </div>

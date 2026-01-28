@@ -2,7 +2,10 @@
 import React, { useState } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../auth/hooks/useAuth';
-import { Menu, X, LayoutDashboard, Calendar, User, LogOut } from 'lucide-react';
+import { 
+  Menu, X, LayoutDashboard, Calendar, CheckCircle, User, LogOut, 
+  Clock, MessageCircle, Settings 
+} from 'lucide-react';
 
 export default function DashboardLayout() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -12,8 +15,12 @@ export default function DashboardLayout() {
 
   const navItems = [
     { name: 'Dashboard', href: '/volunteer/dashboard', icon: LayoutDashboard },
-    { name: 'Events', href: '/volunteer/events', icon: Calendar },
+    { name: 'Browse Events', href: '/volunteer/browse-events', icon: Calendar },
+    { name: 'My Events', href: '/volunteer/my-events', icon: CheckCircle },
+    { name: 'History', href: '/volunteer/history', icon: Clock },
+    { name: 'Messages', href: '/volunteer/messages', icon: MessageCircle },
     { name: 'Profile', href: '/volunteer/profile', icon: User },
+    { name: 'Settings', href: '/volunteer/settings', icon: Settings },
   ];
 
   const handleLogout = () => {
@@ -45,9 +52,9 @@ export default function DashboardLayout() {
 
           {/* RIGHT: User + Logout */}
           <div className="flex items-center space-x-3">
-            <div className="flex items-center space-x-2">
-              <span className="font-medium text-gray-900 hidden lg:block">{user?.name}</span>
-              <span className="px-3 py-1 bg-emerald-100 text-emerald-800 text-xs font-bold rounded-full">
+            <div className="flex items-center space-x-3">
+              <span className="font-bold text-gray-900 hidden lg:block capitalize">{user?.name}</span>
+              <span className="px-3 py-1 bg-emerald-100 text-emerald-800 text-xs font-bold rounded-full border border-emerald-200">
                 Volunteer
               </span>
             </div>
@@ -67,13 +74,14 @@ export default function DashboardLayout() {
         <>
           {/* BACKDROP */}
           <div 
-            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40"
+            className="fixed inset-0 bg-black/30 backdrop-blur-[2px] z-40"
             onClick={() => setMenuOpen(false)}
           />
           
-          {/* SIDEBAR PANEL */}
-          <aside className="fixed top-16 left-0 w-72 h-[calc(100vh-4rem)] bg-white/95 backdrop-blur-xl shadow-2xl border-r border-emerald-200 z-50 transform transition-transform duration-300 translate-x-0">
-            <nav className="p-6 space-y-4">
+          {/* SIDEBAR PANEL - Positioned below navbar (top-16) */}
+          <aside className="fixed top-16 left-0 w-72 h-[calc(100vh-4rem)] bg-white/95 backdrop-blur-xl shadow-2xl border-r border-emerald-100 z-50 transform transition-all duration-300 translate-x-0 flex flex-col">
+            {/* Navigation Menu */}
+            <nav className="p-4 flex-1 space-y-1.5 overflow-y-auto no-scrollbar pt-6">
               {navItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = location.pathname === item.href;
@@ -83,18 +91,35 @@ export default function DashboardLayout() {
                     key={item.name}
                     to={item.href}
                     onClick={() => setMenuOpen(false)}
-                    className={`flex items-center p-4 rounded-xl font-semibold text-lg transition-all group ${
+                    className={`flex items-center p-3.5 rounded-2xl transition-all duration-200 group ${
                       isActive
-                        ? 'bg-gradient-to-r from-green-600 to-emerald-600 text-white shadow-lg shadow-emerald-500/25'
-                        : 'text-gray-700 hover:bg-emerald-50 hover:text-emerald-700 hover:shadow-md'
+                        ? 'bg-gradient-to-r from-green-600 to-emerald-600 text-white shadow-lg shadow-emerald-500/20'
+                        : 'text-gray-600 hover:bg-emerald-50/80 hover:text-emerald-700'
                     }`}
                   >
-                    <Icon size={24} className={`mr-4 flex-shrink-0 ${isActive ? 'text-white' : 'group-hover:scale-110 transition-transform'}`} />
-                    <span>{item.name}</span>
+                    <Icon 
+                      size={22} 
+                      className={`mr-4 flex-shrink-0 transition-transform duration-300 ${
+                        isActive ? 'text-white' : 'text-gray-400 group-hover:scale-110 group-hover:text-emerald-600'
+                      }`} 
+                    />
+                    <span className={`text-base font-bold tracking-tight ${isActive ? 'text-white' : 'text-gray-700'}`}>
+                      {item.name}
+                    </span>
+                    {isActive && (
+                      <div className="ml-auto w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
+                    )}
                   </Link>
                 );
               })}
             </nav>
+
+            {/* Sidebar Subtle Info */}
+            <div className="p-6 text-center">
+              <p className="text-[10px] font-black uppercase tracking-widest text-emerald-200 select-none">
+                Volunteer Portal v2.0
+              </p>
+            </div>
           </aside>
         </>
       )}

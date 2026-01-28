@@ -1,5 +1,7 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
+import { ArrowRight } from "lucide-react";
+import authBg from "../../../assets/home_hero.png";
 
 export default function Register() {
   const [user, setUser] = useState({
@@ -48,120 +50,131 @@ export default function Register() {
   };
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-green-50 via-white to-emerald-50">
-      <div className="bg-white shadow-2xl rounded-3xl p-10 w-full max-w-md border">
-        {/* Fixed Title - Blue Gradient */}
-        <h2 className="text-3xl font-bold text-center mb-2 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-          Create Account
-        </h2>
-        <p className="text-center text-gray-500 mb-6">
-          Join us today
-        </p>
+    <div className="h-screen w-full relative overflow-hidden flex items-center justify-center py-6 px-4">
+      
+      {/* 1. BACKGROUND IMAGE + GRADIENT OVERLAY */}
+      <div className="absolute inset-0 z-0">
+        <img 
+          src={authBg} 
+          alt="Background" 
+          className="w-full h-full object-cover opacity-50"
+        />
+        <div className="absolute inset-0 bg-gradient-to-br from-indigo-600/90 via-blue-600/90 to-emerald-500/90" />
+        <div className="absolute top-1/4 -left-20 w-80 h-80 bg-white/10 rounded-full blur-[100px] animate-blob" />
+        <div className="absolute top-1/2 -right-20 w-80 h-80 bg-white/10 rounded-full blur-[100px] animate-blob animation-delay-2000" />
+      </div>
 
-        {error && (
-          <div className="bg-red-100 text-red-700 p-3 mb-3 rounded-xl">
-            {error}
+      <div className="max-w-md w-full relative z-10">
+        {/* Glass Card */}
+        <div className="bg-white/80 backdrop-blur-3xl shadow-2xl rounded-[2.5rem] p-10 border border-white/50">
+          <div className="text-center mb-8">
+            <h2 className="text-4xl font-black text-slate-900 tracking-tighter mb-2">
+              Join the <span className="text-emerald-600">Network.</span>
+            </h2>
+            <p className="text-slate-500 font-bold text-sm uppercase tracking-widest">Create Identity Node</p>
           </div>
-        )}
 
-        {success && (
-          <div className="bg-green-100 text-green-700 p-3 mb-3 rounded-xl">
-            {success}
+          {error && (
+            <div className="bg-rose-50 text-rose-600 p-3 mb-4 rounded-xl text-xs font-bold text-center border border-rose-100 italic">
+              {error}
+            </div>
+          )}
+
+          {success && (
+            <div className="bg-emerald-50 text-emerald-600 p-3 mb-4 rounded-xl text-xs font-bold text-center border border-emerald-100 italic">
+              {success}
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <input
+              name="name"
+              type="text"
+              placeholder="Full Name"
+              value={user.name}
+              onChange={handleChange}
+              className="w-full px-6 py-3.5 bg-white text-slate-900 border border-slate-200 rounded-2xl
+                         focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50
+                         focus:outline-none text-sm font-bold placeholder-slate-400
+                         hover:border-slate-300 transition-all duration-300"
+              required
+            />
+
+            <input
+              name="email"
+              type="email"
+              placeholder="Email Address"
+              value={user.email}
+              onChange={handleChange}
+              autoComplete="off"
+              className="w-full px-6 py-4 bg-white text-slate-900 border border-slate-200 rounded-2xl
+                         focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50
+                         focus:outline-none text-sm font-bold placeholder-slate-400
+                         hover:border-slate-300 transition-all duration-300"
+              required
+            />
+
+            <input
+              name="number"
+              type="tel"
+              placeholder="Mobile Number"
+              value={user.number}
+              onChange={handleChange}
+              className="w-full px-6 py-4 bg-white text-slate-900 border border-slate-200 rounded-2xl
+                         focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50
+                         focus:outline-none text-sm font-bold placeholder-slate-400
+                         hover:border-slate-300 transition-all duration-300"
+              required
+            />
+
+            <input
+              name="password"
+              type="password"
+              placeholder="Secure Password"
+              value={user.password}
+              onChange={handleChange}
+              autoComplete="new-password"
+              className="w-full px-6 py-4 bg-white text-slate-900 border border-slate-200 rounded-2xl
+                         focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50
+                         focus:outline-none text-sm font-bold placeholder-slate-400
+                         hover:border-slate-300 transition-all duration-300"
+              required
+            />
+
+            <select
+              name="role"
+              value={user.role}
+              onChange={handleChange}
+              className="w-full px-6 py-4 bg-white text-slate-900 border border-slate-200 rounded-2xl
+                         focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50
+                         focus:outline-none text-sm font-bold cursor-pointer
+                         hover:border-slate-300 transition-all duration-300"
+            >
+              <option value="VOLUNTEER">Volunteer</option>
+              <option value="ORGANIZER">Organizer</option>
+            </select>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-slate-900 hover:bg-slate-800 text-white font-black py-4 px-6 rounded-2xl text-sm uppercase tracking-widest shadow-xl
+                         transform hover:-translate-y-1 active:scale-[0.98] transition-all duration-300
+                         disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loading ? "INITIALIZING..." : "CREATE ACCOUNT"}
+            </button>
+          </form>
+
+          <div className="text-center mt-8">
+            <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest mb-4">ALREADY REGISTERED?</p>
+            <Link
+              to="/login"
+              className="inline-flex items-center gap-2 group text-emerald-600 font-bold text-sm hover:underline"
+            >
+              Access Identity <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
+            </Link>
           </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Fixed Inputs - Black Text + White BG */}
-          <input
-            name="name"
-            type="text"
-            placeholder="Full Name"
-            value={user.name}
-            onChange={handleChange}
-            className="w-full px-4 py-3 bg-white text-black border border-gray-300 rounded-xl 
-                       focus:ring-2 focus:ring-blue-500 focus:border-blue-500 
-                       focus:outline-none placeholder-gray-500 hover:border-gray-400
-                       transition-all duration-200"
-            required
-          />
-
-          <input
-            name="email"
-            type="email"
-            placeholder="Email Address"
-            value={user.email}
-            onChange={handleChange}
-            autoComplete="off"
-            className="w-full px-4 py-3 bg-white text-black border border-gray-300 rounded-xl 
-                       focus:ring-2 focus:ring-blue-500 focus:border-blue-500 
-                       focus:outline-none placeholder-gray-500 hover:border-gray-400
-                       transition-all duration-200"
-            required
-          />
-
-          <input
-            name="password"
-            type="password"
-            placeholder="Password"
-            value={user.password}
-            onChange={handleChange}
-            autoComplete="new-password"
-            className="w-full px-4 py-3 bg-white text-black border border-gray-300 rounded-xl 
-                       focus:ring-2 focus:ring-blue-500 focus:border-blue-500 
-                       focus:outline-none placeholder-gray-500 hover:border-gray-400
-                       transition-all duration-200"
-            required
-          />
-
-          <input
-            name="number"
-            type="tel"
-            placeholder="Mobile Number"
-            value={user.number}
-            onChange={handleChange}
-            className="w-full px-4 py-3 bg-white text-black border border-gray-300 rounded-xl 
-                       focus:ring-2 focus:ring-blue-500 focus:border-blue-500 
-                       focus:outline-none placeholder-gray-500 hover:border-gray-400
-                       transition-all duration-200"
-            required
-          />
-
-          <select
-            name="role"
-            value={user.role}
-            onChange={handleChange}
-            className="w-full px-4 py-3 bg-white text-black border border-gray-300 rounded-xl 
-                       focus:ring-2 focus:ring-blue-500 focus:border-blue-500 
-                       focus:outline-none cursor-pointer hover:border-gray-400
-                       transition-all duration-200"
-          >
-            <option value="VOLUNTEER">Volunteer</option>
-            <option value="ORGANIZER">Organizer</option>
-            {/* <option value="ADMIN">Admin</option> */}
-          </select>
-
-          {/* Fixed Button - Blue */}
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 
-                       text-white font-bold py-3 rounded-xl text-lg shadow-lg hover:shadow-xl 
-                       transform hover:-translate-y-0.5 transition-all duration-200
-                       disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {loading ? "Creating Account..." : "Create Account"}
-          </button>
-        </form>
-
-        <p className="text-center text-gray-500 mt-6">
-          Already have an account?{" "}
-          <span
-            className="text-blue-600 font-semibold cursor-pointer hover:underline"
-            onClick={() => navigate("/login")}
-          >
-            Login
-          </span>
-        </p>
+        </div>
       </div>
     </div>
   );

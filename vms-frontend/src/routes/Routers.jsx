@@ -8,17 +8,39 @@ import Register from "../features/auth/pages/Register";
 // Admin routes
 import AdminDashboard from "../features/admin/pages/AdminDashboard";
 import Events from "../features/admin/pages/Events";
+import AdminVolunteers from "../features/admin/pages/AdminVolunteers";
+import AdminOrganizers from "../features/admin/pages/AdminOrganizers";
+import AdminEventsApproval from "../features/admin/pages/AdminEventsApproval";
+import AdminReports from "../features/admin/pages/AdminReports";
+import AdminComplaints from "../features/admin/pages/AdminComplaints";
+import AdminSettings from "../features/admin/pages/AdminSettings";
+import AdminOrganizerDetails from "../features/admin/pages/AdminOrganizerDetails";
 import DashboardLayout from "../features/admin/layout/DashboardLayout";
 
 // Organizer routes
 import OrganizerDashboard from "../features/organizer/pages/OrganizerDashboard";
 import OrganizerEvents from "../features/organizer/pages/OrganizerEvents";
 import CreateEvent from "../features/organizer/pages/CreateEvent";
+import OrganizerVolunteers from "../features/organizer/pages/OrganizerVolunteers";
+import OrganizerAttendance from "../features/organizer/pages/OrganizerAttendance";
+import OrganizerReports from "../features/organizer/pages/OrganizerReports";
+import OrganizerMessages from "../features/organizer/pages/OrganizerMessages";
+import OrganizerProfile from "../features/organizer/pages/OrganizerProfile";
+import OrganizerSettings from "../features/organizer/pages/OrganizerSettings";
+import EditEvent from '../features/organizer/pages/EditEvent';
 import OrganizerDashboardLayout from "../features/organizer/layout/DashboardLayout";
+import OrganizerEventVolunteers from "../features/organizer/pages/OrganizerEventVolunteers";
+import OrganizerEventDetails from "../features/organizer/pages/OrganizerEventDetails";
 
 // Volunteer routes
 import VolunteerDashboard from "../features/volunteer/pages/VolunteerDashboard";
 import VolunteerAvailableEvents from "../features/volunteer/pages/VolunteerAvailableEvents";
+import VolunteerMyEvents from "../features/volunteer/pages/VolunteerMyEvents";
+import VolunteerHistory from "../features/volunteer/pages/VolunteerHistory";
+import VolunteerMessages from "../features/volunteer/pages/VolunteerMessages";
+import VolunteerProfile from "../features/volunteer/pages/VolunteerProfile";
+import VolunteerSettings from "../features/volunteer/pages/VolunteerSettings";
+import VolunteerEventDetails from "../features/volunteer/pages/VolunteerEventDetails";
 import VolunteerDashboardLayout from "../features/volunteer/layout/DashboardLayout";
 
 export default function Routers() {
@@ -29,36 +51,54 @@ export default function Routers() {
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
 
-      {/* Admin Routes */}
+      {/* ✅ ADMIN ROUTES - COMPLETE */}
       <Route
         path="/admin"
         element={
           <ProtectedRoute allowedRoles={["ADMIN"]}>
             <DashboardLayout />
           </ProtectedRoute>
-        }
+        } 
       >
-        <Route path="dashboard" element={<AdminDashboard />} />
-        <Route path="events" element={<Events />} />
         <Route index element={<Navigate to="dashboard" replace />} />
+        <Route path="dashboard" element={<AdminDashboard />} />
+        <Route path="volunteers" element={<AdminVolunteers />} />
+        <Route path="organizers" element={<AdminOrganizers />} />
+        <Route path="events-approval" element={<AdminEventsApproval />} />
+        <Route path="reports" element={<AdminReports />} />
+        <Route path="complaints" element={<AdminComplaints />} />
+        <Route path="settings" element={<AdminSettings />} />
+        <Route path="events" element={<Events />} />
+        <Route path="events/:eventId" element={<OrganizerEventDetails />} />
+        <Route path="events/:id/edit" element={<EditEvent />} />
+        <Route path="organizers/:id" element={<AdminOrganizerDetails />} />
       </Route>
 
-      {/* Organizer Routes - COMPLETE */}
+      {/* ✅ ORGANIZER ROUTES - COMPLETE */}
       <Route
         path="/organizer"
         element={
           <ProtectedRoute allowedRoles={["ORGANIZER"]}>
-            <OrganizerDashboardLayout /> {/* ✅ Real Layout */}
+            <OrganizerDashboardLayout />
           </ProtectedRoute>
         }
       >
         <Route index element={<Navigate to="dashboard" replace />} />
         <Route path="dashboard" element={<OrganizerDashboard />} />
-        <Route path="events" element={<OrganizerEvents />} />
         <Route path="create-event" element={<CreateEvent />} />
+        <Route path="events" element={<OrganizerEvents />} />
+        <Route path="volunteers" element={<OrganizerVolunteers />} />
+        <Route path="attendance" element={<OrganizerAttendance />} />
+        <Route path="reports" element={<OrganizerReports />} />
+        <Route path="messages" element={<OrganizerMessages />} />
+        <Route path="profile" element={<OrganizerProfile />} />
+        <Route path="settings" element={<OrganizerSettings />} />
+        <Route path="events/:id/edit" element={<EditEvent />} />
+        <Route path="events/:eventId" element={<OrganizerEventDetails />} />
+        <Route path="events/:eventId/volunteers" element={<OrganizerEventVolunteers />} />
       </Route>
 
-      {/* Volunteer Routes */}
+      {/* ✅ VOLUNTEER ROUTES - COMPLETE */}
       <Route
         path="/volunteer"
         element={
@@ -67,9 +107,15 @@ export default function Routers() {
           </ProtectedRoute>
         }
       >
-        <Route path="dashboard" element={<VolunteerDashboard />} />
-        <Route path="events" element={<VolunteerAvailableEvents />} />
         <Route index element={<Navigate to="dashboard" replace />} />
+        <Route path="dashboard" element={<VolunteerDashboard />} />
+        <Route path="browse-events" element={<VolunteerAvailableEvents />} />
+        <Route path="my-events" element={<VolunteerMyEvents />} />
+        <Route path="history" element={<VolunteerHistory />} />
+        <Route path="messages" element={<VolunteerMessages />} />
+        <Route path="profile" element={<VolunteerProfile />} />
+        <Route path="settings" element={<VolunteerSettings />} />
+        <Route path="events/:eventId" element={<VolunteerEventDetails />} />
       </Route>
 
       {/* Catch All */}

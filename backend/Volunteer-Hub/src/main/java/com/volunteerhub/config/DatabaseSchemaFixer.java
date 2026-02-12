@@ -28,7 +28,6 @@ public class DatabaseSchemaFixer implements CommandLineRunner {
             logger.info("Adding new constraint with ATTENDED status...");
             jdbcTemplate.execute("ALTER TABLE event_volunteers ADD CONSTRAINT event_volunteers_status_check " +
                     "CHECK (status IN ('PENDING', 'APPROVED', 'REJECTED', 'REMOVED', 'ATTENDED'))");
-
             logger.info("✅ Database Schema Fixed Successfully!");
         } catch (Exception e) {
             logger.error("❌ Failed to fix database schema: " + e.getMessage());

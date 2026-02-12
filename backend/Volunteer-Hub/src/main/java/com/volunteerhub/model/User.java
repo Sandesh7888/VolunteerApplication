@@ -1,6 +1,7 @@
 package com.volunteerhub.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import lombok.*;
@@ -13,6 +14,7 @@ import java.util.ArrayList;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@JsonIgnoreProperties({ "hibernateLazyInitializer", "handler" })
 public class User {
 
     @Id
@@ -38,15 +40,70 @@ public class User {
     @Column(unique = true)
     private String vmsId;
 
-    @OneToMany(mappedBy = "organizer", cascade = CascadeType.ALL, orphanRemoval = true)
-    @JsonIgnore
     @Builder.Default
+    private Boolean verified = false;
+
+    private String verificationOtp;
+
+    private java.time.LocalDateTime otpExpiry;
+
+    @OneToMany(mappedBy = "organizer", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     private List<Event> events = new ArrayList<>();
 
-    @OneToMany(mappedBy = "volunteer", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonIgnore
+    public List<Event> getEvents() {
+        return events;
+    }
+
+    @OneToMany(mappedBy = "volunteer", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     private List<EventVolunteer> registrations = new ArrayList<>();
+
+    @JsonIgnore
+    public List<EventVolunteer> getRegistrations() {
+        return registrations;
+    }
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private List<UserDocument> documents = new ArrayList<>();
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private List<Notification> notifications = new ArrayList<>();
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private List<SupportTicket> supportTickets = new ArrayList<>();
+
+    @Builder.Default
+    private Boolean documentsVerified = false;
+
+    @JsonIgnore
+    public List<UserDocument> getDocuments() {
+        return documents;
+    }
+
+    @JsonIgnore
+    public List<Notification> getNotifications() {
+        return notifications;
+    }
+
+    @JsonIgnore
+    public List<SupportTicket> getSupportTickets() {
+        return supportTickets;
+    }
 
     public enum Role {
         ADMIN, ORGANIZER, VOLUNTEER

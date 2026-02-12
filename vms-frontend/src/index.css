@@ -54,6 +54,15 @@
   }
 }
 
+@keyframes slow-zoom {
+  0% { transform: scale(1); }
+  100% { transform: scale(1.1); }
+}
+
+.animate-slow-zoom {
+  animation: slow-zoom 20s linear infinite alternate;
+}
+
 .animate-blob {
   animation: blob 7s infinite;
 }
@@ -78,4 +87,10 @@
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
+}
+
+/* Base dark mode styles */
+.dark {
+  background-color: #020617;
+  color: #f8fafc;
 }

@@ -4,8 +4,9 @@ import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../auth/hooks/useAuth';
 import { 
   Menu, X, LayoutDashboard, Calendar, CheckCircle, User, LogOut, 
-  Clock, MessageCircle, Settings 
+  Clock, LifeBuoy, Settings, Award 
 } from 'lucide-react';
+import NotificationBell from '../../common/components/NotificationBell';
 
 export default function DashboardLayout() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -17,8 +18,9 @@ export default function DashboardLayout() {
     { name: 'Dashboard', href: '/volunteer/dashboard', icon: LayoutDashboard },
     { name: 'Browse Events', href: '/volunteer/browse-events', icon: Calendar },
     { name: 'My Events', href: '/volunteer/my-events', icon: CheckCircle },
+    { name: 'Certificates', href: '/volunteer/certificates', icon: Award }, // Added Certificates
     { name: 'History', href: '/volunteer/history', icon: Clock },
-    { name: 'Messages', href: '/volunteer/messages', icon: MessageCircle },
+    { name: 'Help & Support', href: '/volunteer/support', icon: LifeBuoy },
     { name: 'Profile', href: '/volunteer/profile', icon: User },
     { name: 'Settings', href: '/volunteer/settings', icon: Settings },
   ];
@@ -52,6 +54,7 @@ export default function DashboardLayout() {
 
           {/* RIGHT: User + Logout */}
           <div className="flex items-center space-x-3">
+            <NotificationBell />
             <div className="flex items-center space-x-3">
               <span className="font-bold text-gray-900 hidden lg:block capitalize">{user?.name}</span>
               <span className="px-3 py-1 bg-emerald-100 text-emerald-800 text-xs font-bold rounded-full border border-emerald-200">

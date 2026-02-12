@@ -10,6 +10,7 @@ import { getEventStatus } from "../../../utils/formatters";
 export default function OrganizerAttendance() {
   const [events, setEvents] = useState([]);
   const [selectedEvent, setSelectedEvent] = useState(null);
+  const [selectedDate, setSelectedDate] = useState("");
   const [volunteers, setVolunteers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [vLoading, setVLoading] = useState(false);
@@ -90,13 +91,38 @@ export default function OrganizerAttendance() {
 
   const handleSelectEvent = (event) => {
     setSelectedEvent(event);
+    
+    // Determine default selected date
+    const dates = getEventDates(event.startDate, event.endDate);
+    const today = new Date().toISOString().split('T')[0];
+    
+    if (dates.includes(today)) {
+      setSelectedDate(today);
+    } else {
+      // Default to latest date if today is not in range
+      setSelectedDate(dates[dates.length - 1]);
+    }
+    
     fetchVolunteers(event.id);
   };
 
   const toggleAttendance = async (volunteer, date) => {
-    // Check if the specific date is today or event is live
-    const today = new Date().toISOString().split('T')[0];
+    const status = getEventStatus(
+      selectedEvent.startDate, 
+      selectedEvent.endDate, 
+      selectedEvent.startTime, 
+      selectedEvent.endTime,
+      selectedEvent.status
+    );
     
+    if (status !== 'LIVE' || selectedEvent.status === 'COMPLETED') {
+      const message = status === 'UPCOMING' 
+        ? "Attendance cannot be taken for upcoming events yet." 
+        : "Attendance cannot be modified for completed events.";
+      alert(message);
+      return;
+    }
+
     setUpdating(prev => ({ ...prev, [`${volunteer.id}-${date}`]: true }));
     try {
       const isAttended = volunteer.attendanceRecords?.some(r => r.date === date && r.status === 'PRESENT');
@@ -226,10 +252,12 @@ export default function OrganizerAttendance() {
                     </div>
 
                     <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-xl min-w-[240px]">
-                       <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Today's Attendance</p>
+                       <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-2">
+                         Attendance for {new Date(selectedDate).toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'short' })}
+                       </p>
                        <div className="flex items-end gap-2">
                           <span className="text-5xl font-black text-purple-600">
-                            {volunteers.filter(v => v.attendanceRecords?.some(r => r.date === new Date().toISOString().split('T')[0] && r.status === 'PRESENT')).length}
+                            {volunteers.filter(v => v.attendanceRecords?.some(r => r.date === selectedDate && r.status === 'PRESENT')).length}
                           </span>
                           <span className="text-xl font-bold text-gray-400 mb-1">
                             / {volunteers.length}
@@ -239,7 +267,7 @@ export default function OrganizerAttendance() {
                           <div 
                             className="bg-purple-600 h-full rounded-full transition-all duration-500"
                             style={{ 
-                              width: `${(volunteers.filter(v => v.attendanceRecords?.some(r => r.date === new Date().toISOString().split('T')[0] && r.status === 'PRESENT')).length / Math.max(1, volunteers.length)) * 100}%` 
+                              width: `${(volunteers.filter(v => v.attendanceRecords?.some(r => r.date === selectedDate && r.status === 'PRESENT')).length / Math.max(1, volunteers.length)) * 100}%` 
                             }}
                           />
                        </div>
@@ -254,14 +282,37 @@ export default function OrganizerAttendance() {
                     <Loader2 className="w-12 h-12 animate-spin text-purple-600 mb-4" />
                     <p className="text-gray-500 font-medium">Loading roster...</p>
                   </div>
-                ) : volunteers.length === 0 ? (
-                  <div className="text-center py-20 bg-gray-50 rounded-[2rem] border-2 border-dashed border-gray-200">
-                    <Users className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                    <h3 className="text-xl font-bold text-gray-500">No approved volunteers yet</h3>
-                  </div>
                 ) : (
-                  <div className="space-y-6">
-                     {volunteers.map(volunteer => {
+                  <div className="space-y-8">
+                    {/* Daily Summary Row */}
+                    <div className="bg-slate-50 p-6 rounded-[2rem] border border-slate-100 flex flex-wrap gap-4 items-center justify-between">
+                       <div className="flex items-center gap-3">
+                          <Calendar size={20} className="text-purple-600" />
+                          <p className="font-bold text-slate-700">Select Event Date:</p>
+                       </div>
+                       <div className="flex flex-wrap gap-2">
+                          {getEventDates(selectedEvent.startDate, selectedEvent.endDate).map(date => {
+                             const isSelected = selectedDate === date;
+                             const displayDate = new Date(date).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' });
+                             return (
+                                <button
+                                   key={date}
+                                   onClick={() => setSelectedDate(date)}
+                                   className={`px-6 py-3 rounded-2xl font-black uppercase tracking-widest text-xs transition-all border-2 ${
+                                      isSelected 
+                                         ? 'bg-purple-600 border-purple-600 text-white shadow-lg shadow-purple-100' 
+                                         : 'bg-white border-slate-200 text-slate-500 hover:border-purple-200'
+                                   }`}
+                                >
+                                   {displayDate}
+                                </button>
+                             );
+                          })}
+                       </div>
+                    </div>
+
+                    <div className="space-y-6">
+                      {volunteers.map(volunteer => {
                         const eventDates = getEventDates(selectedEvent.startDate, selectedEvent.endDate);
                         const isLive = getEventStatus(selectedEvent.startDate, selectedEvent.endDate, selectedEvent.startTime, selectedEvent.endTime) === 'LIVE';
 
@@ -277,45 +328,75 @@ export default function OrganizerAttendance() {
                                  </div>
                                  <div>
                                     <p className="font-bold text-gray-900 text-lg leading-tight">{volunteer.volunteer?.name}</p>
-                                    <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mt-1">Volunteer ID: {volunteer.volunteer?.userId}</p>
+                                    <div className="flex items-center gap-2 mt-1">
+                                       <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">ID: {volunteer.volunteer?.userId || volunteer.volunteer?.id}</p>
+                                       <span className="text-gray-200">|</span>
+                                       
+                                       {(() => {
+                                          const totalDays = getEventDates(selectedEvent.startDate, selectedEvent.endDate).length;
+                                          const presentDays = volunteer.attendanceRecords?.filter(r => r.status === 'PRESENT').length || 0;
+                                          const percentage = Math.round((presentDays / totalDays) * 100);
+                                          
+                                          return (
+                                             <div className="flex items-center gap-2">
+                                                <span className={`text-[10px] font-black uppercase tracking-widest ${percentage >= 75 ? 'text-emerald-500' : percentage >= 50 ? 'text-amber-500' : 'text-rose-500'}`}>
+                                                   {percentage}% Present ({presentDays}/{totalDays} Days)
+                                                </span>
+                                             </div>
+                                          );
+                                       })()}
+                                    </div>
                                  </div>
                                </div>
 
-                               <div className="flex-1 flex flex-wrap gap-3">
-                                  {eventDates.map(date => {
-                                    const isAttended = volunteer.attendanceRecords?.some(r => r.date === date && r.status === 'PRESENT');
-                                    const isUpdating = updating[`${volunteer.id}-${date}`];
-                                    const displayDate = new Date(date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+                                 <div className="flex-1 flex flex-wrap items-center justify-end gap-3">
+                                  {(() => {
+                                    const isAttended = volunteer.attendanceRecords?.some(r => r.date === selectedDate && r.status === 'PRESENT');
+                                    const isUpdating = updating[`${volunteer.id}-${selectedDate}`];
+                                    const eventStatus = getEventStatus(
+                                      selectedEvent.startDate,
+                                      selectedEvent.endDate,
+                                      selectedEvent.startTime,
+                                      selectedEvent.endTime,
+                                      selectedEvent.status
+                                    );
+                                    const isLocked = eventStatus !== 'LIVE' || selectedEvent.status === 'COMPLETED';
+                                    const lockReason = eventStatus === 'UPCOMING' ? 'Not Started' : 'Completed';
 
                                     return (
                                       <button
-                                        key={date}
-                                        onClick={() => toggleAttendance(volunteer, date)}
-                                        disabled={isUpdating}
-                                        className={`flex flex-col items-center justify-center p-3 rounded-2xl border-2 transition-all min-w-[80px] ${
+                                        onClick={() => toggleAttendance(volunteer, selectedDate)}
+                                        disabled={isUpdating || isLocked}
+                                        className={`flex items-center gap-4 px-8 py-4 rounded-2xl border-2 transition-all min-w-[200px] justify-between ${
                                           isAttended
                                             ? 'bg-emerald-50 border-emerald-500 text-emerald-700'
-                                            : 'bg-white border-gray-100 text-gray-400 hover:border-purple-200 hover:text-purple-500'
+                                            : isLocked 
+                                              ? 'bg-slate-50 border-slate-200 text-slate-400 cursor-not-allowed'
+                                              : 'bg-white border-gray-100 text-gray-400 hover:border-purple-200 hover:text-purple-500'
                                         } ${isUpdating ? 'opacity-50 cursor-wait' : ''}`}
                                       >
-                                        <span className="text-[10px] font-black uppercase tracking-tighter mb-1 opacity-60">
-                                          {displayDate}
-                                        </span>
+                                        <div className="flex flex-col items-start">
+                                          <span className="text-sm font-black uppercase tracking-widest">
+                                            {isAttended ? 'Present' : 'Absent'}
+                                          </span>
+                                          {isLocked && <span className="text-[9px] font-bold opacity-60 uppercase">{lockReason}</span>}
+                                        </div>
                                         {isUpdating ? (
-                                          <Loader2 size={16} className="animate-spin text-purple-600" />
+                                          <Loader2 size={24} className="animate-spin text-purple-600" />
                                         ) : isAttended ? (
-                                          <CheckCircle size={20} className="text-emerald-500" />
+                                          <CheckCircle size={28} className="text-emerald-500" />
                                         ) : (
-                                          <div className="w-5 h-5 rounded-full border-2 border-current opacity-30" />
+                                          <XCircle size={28} className={`${isLocked ? 'opacity-10' : 'opacity-20'}`} />
                                         )}
                                       </button>
                                     );
-                                  })}
+                                  })()}
                                </div>
                              </div>
                           </div>
                         );
-                     })}
+                      })}
+                    </div>
                   </div>
                 )}
               </div>

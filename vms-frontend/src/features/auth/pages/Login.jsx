@@ -3,6 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import { ArrowRight, ShieldCheck, Activity } from "lucide-react";
 import authBg from "../../../assets/home_hero.png";
+import Nav from "../../../pages/Nav";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -52,17 +53,17 @@ export default function Login() {
 
   return (
     <div className="h-screen w-full relative overflow-hidden flex items-center justify-center py-6 px-4">
-      
+     <Nav/>
       {/* 1. BACKGROUND IMAGE + GRADIENT OVERLAY */}
       <div className="absolute inset-0 z-0">
         <img 
           src={authBg} 
           alt="Background" 
-          className="w-full h-full object-cover opacity-50"
+          className="w-full h-full object-cover"
         />
-        <div className="absolute inset-0 bg-gradient-to-br from-indigo-600/90 via-blue-600/90 to-emerald-500/90" />
-        <div className="absolute top-1/4 -right-20 w-80 h-80 bg-white/10 rounded-full blur-[100px] animate-blob" />
-        <div className="absolute top-1/2 -left-20 w-80 h-80 bg-white/10 rounded-full blur-[100px] animate-blob animation-delay-2000" />
+        <div className="absolute inset-0 bg-gradient-to-br from-indigo-6/90 via-blue-6/90 to-emerald-60/50" />
+        <div className="absolute top-1/4 -left-20 w-80 h-80 bg-white/10 rounded-full blur-[100px] animate-blob" />
+        <div className="absolute top-1/2 -right-20 w-80 h-80 bg-white/10 rounded-full blur-[100px] animate-blob animation-delay-2000" />
       </div>
 
       <div className="max-w-md w-full relative z-10">
@@ -93,6 +94,7 @@ export default function Login() {
                            focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50
                            focus:outline-none text-sm font-bold placeholder-slate-400
                            hover:border-slate-300 transition-all duration-300"
+                autoComplete="off"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -106,11 +108,20 @@ export default function Login() {
                            focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50
                            focus:outline-none text-sm font-bold placeholder-slate-400
                            hover:border-slate-300 transition-all duration-300"
+                autoComplete="new-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 disabled={loading}
               />
+              <div className="flex justify-end px-2">
+                <Link 
+                  to="/forgot-password" 
+                  className="text-emerald-600 hover:text-emerald-700 text-[10px] font-black uppercase tracking-widest transition-colors"
+                >
+                  Forgot Password?
+                </Link>
+              </div>
             </div>
 
             <button

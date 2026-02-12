@@ -26,10 +26,32 @@ export function AuthProvider({ children }) {
     setUser(null);
   };
 
+  const refreshUser = async () => {
+    const currentId = user?.userId || user?.id;
+    if (!currentId) return;
+    try {
+      const response = await fetch(`http://localhost:8080/api/users/${currentId}`);
+      if (response.ok) {
+        const updatedData = await response.json();
+        // Normalize: Ensure frontend consistently uses userId
+        const normalizedData = {
+          ...updatedData,
+          userId: updatedData.id 
+        };
+        localStorage.setItem("user", JSON.stringify(normalizedData));
+        setUser(normalizedData);
+        return normalizedData;
+      }
+    } catch (err) {
+      console.error("Failed to refresh user session:", err);
+    }
+  };
+
   const value = {
     user,
     login,
     logout,
+    refreshUser,
     loading,
     isAuthenticated: !!user
   };

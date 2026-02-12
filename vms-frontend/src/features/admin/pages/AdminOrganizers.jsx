@@ -192,33 +192,37 @@ export default function AdminOrganizers() {
                       </td>
 
                       <td className="px-6 py-4">
-                         <span className="px-2 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-emerald-100 text-emerald-700">
-                           Verified
-                         </span>
+                         {o.documentsVerified ? (
+                           <span className="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-[10px] font-black uppercase tracking-widest border border-emerald-200">
+                             Verified
+                           </span>
+                         ) : (
+                           <span className="px-3 py-1 bg-rose-100 text-rose-700 rounded-full text-[10px] font-black uppercase tracking-widest border border-rose-200">
+                             Pending
+                           </span>
+                         )}
                       </td>
 
-                      <td className="px-6 py-4 text-right">
-                        <div className="flex items-center justify-end gap-2">
+                      <td className="px-6 py-4">
+                        <div className="flex items-center justify-end gap-3">
                           <button 
-                            onClick={() => navigate(`/admin/organizers/${o.id}`)}
-                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
-                            title="View Events"
+                            onClick={() => window.location.href = `/admin/organizer-profile/${o.id}`}
+                            className="p-2 bg-emerald-50 text-emerald-600 rounded-xl hover:bg-emerald-600 hover:text-white transition-all shadow-sm"
+                            title="View Profile"
                           >
-                            <ExternalLink size={18} />
+                            <Users className="w-4 h-4" />
                           </button>
                           <button 
                             onClick={() => handleOpenModal(o)}
-                            className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
-                            title="Edit"
+                            className="p-2 bg-amber-50 text-amber-600 rounded-xl hover:bg-amber-600 hover:text-white transition-all shadow-sm"
                           >
-                            <Edit2 size={18} />
+                            <Edit2 className="w-4 h-4" />
                           </button>
                           <button 
                             onClick={() => handleDelete(o.id)}
-                            className="p-2 text-rose-600 hover:bg-rose-50 rounded-lg transition-all"
-                            title="Remove"
+                            className="p-2 bg-rose-50 text-rose-600 rounded-xl hover:bg-rose-600 hover:text-white transition-all shadow-sm"
                           >
-                            <Trash2 size={18} />
+                            <Trash2 className="w-4 h-4" />
                           </button>
                         </div>
                       </td>

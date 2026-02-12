@@ -4,8 +4,9 @@ import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../auth/hooks/useAuth';
 import { 
   Menu, X, LayoutDashboard, Plus, Calendar, Users, 
-  CheckSquare, FileText, MessageCircle, User, Settings, LogOut 
+  CheckSquare, FileText, LifeBuoy, User, Settings, LogOut 
 } from 'lucide-react';
+import NotificationBell from '../../common/components/NotificationBell';
 
 export default function OrganizerDashboardLayout() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -20,7 +21,7 @@ export default function OrganizerDashboardLayout() {
     { name: 'Volunteers', href: '/organizer/volunteers', icon: Users }, // → Progress
     { name: 'Attendance', href: '/organizer/attendance', icon: CheckSquare },
     { name: 'Reports', href: '/organizer/reports', icon: FileText },
-    { name: 'Messages', href: '/organizer/messages', icon: MessageCircle },
+    { name: 'Help & Support', href: '/organizer/support', icon: LifeBuoy },
     { name: 'Profile', href: '/organizer/profile', icon: User },
     { name: 'Settings', href: '/organizer/settings', icon: Settings },
   ];
@@ -54,6 +55,7 @@ export default function OrganizerDashboardLayout() {
 
           {/* RIGHT: User + Logout */}
           <div className="flex items-center space-x-3">
+            <NotificationBell />
             <div className="flex items-center space-x-2">
               <span className="font-bold text-gray-900 hidden lg:block capitalize">{user?.name}</span>
               <span className="px-3 py-1 bg-purple-100 text-purple-800 text-xs font-bold rounded-full border border-purple-200">

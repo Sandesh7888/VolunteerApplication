@@ -2,9 +2,11 @@ package com.volunteerhub.model;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonIdentityInfo;
+import com.fasterxml.jackson.annotation.ObjectIdGenerators;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.*;
 import java.util.List;
 import java.util.ArrayList;
@@ -19,6 +21,7 @@ import java.time.LocalTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@JsonIgnoreProperties({ "hibernateLazyInitializer", "handler" })
 public class Event {
 
     @Id
@@ -108,9 +111,15 @@ public class Event {
     private User organizer;
 
     @OneToMany(mappedBy = "event", cascade = CascadeType.ALL, orphanRemoval = true)
-    @JsonIgnore
     @Builder.Default
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     private List<EventVolunteer> registrations = new ArrayList<>();
+
+    @JsonIgnore
+    public List<EventVolunteer> getRegistrations() {
+        return registrations;
+    }
 
     public enum EventStatus {
         DRAFT,

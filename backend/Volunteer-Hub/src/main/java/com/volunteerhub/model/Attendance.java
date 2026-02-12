@@ -1,5 +1,7 @@
 package com.volunteerhub.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDate;
@@ -10,6 +12,7 @@ import java.time.LocalDate;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@JsonIgnoreProperties({ "hibernateLazyInitializer", "handler" })
 public class Attendance {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -17,7 +20,14 @@ public class Attendance {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "event_volunteer_id", nullable = false)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     private EventVolunteer eventVolunteer;
+
+    @JsonIgnore
+    public EventVolunteer getEventVolunteer() {
+        return eventVolunteer;
+    }
 
     @Column(nullable = false)
     private LocalDate date;

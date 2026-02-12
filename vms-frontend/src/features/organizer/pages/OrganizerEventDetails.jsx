@@ -5,7 +5,7 @@ import { useAuth } from '../../auth/hooks/useAuth';
 import { 
   Calendar, MapPin, Users, Tag, CheckCircle, Clock, 
   ArrowLeft, Edit3, Trash2, Eye, User, CheckCircle2, XCircle, Loader2,
-  Info, BarChart3, Users2, XOctagon, Send
+  Info, BarChart3, Users2, XOctagon, Send, Award, Star
 } from 'lucide-react';
 import { getEventStatus } from '../../../utils/formatters';
 
@@ -90,6 +90,21 @@ export default function OrganizerEventDetails() {
     }
   };
 
+  const issueCertificate = async (registrationId) => {
+    const certUrl = window.prompt("Enter Certificate URL (e.g., a PDF link):", `https://vms.com/certificates/${registrationId}`);
+    if (!certUrl) return;
+
+    try {
+      await apiCall(`/volunteers/${registrationId}/certificate?organizerId=${authUser?.userId}&certificateUrl=${encodeURIComponent(certUrl)}`, { 
+        method: "POST" 
+      });
+      alert("Certificate issued successfully!");
+      fetchEventData();
+    } catch (err) {
+      alert("Failed to issue certificate: " + err.message);
+    }
+  };
+
   const handlePublish = async () => {
     try {
       if (!window.confirm("Are you sure you want to publish this event? It will be visible to volunteers.")) return;
@@ -97,6 +112,44 @@ export default function OrganizerEventDetails() {
       fetchEventData();
     } catch (err) {
       alert("Failed to publish: " + err.message);
+    }
+  };
+
+  const allFeedbacks = React.useMemo(() => {
+    if (!Array.isArray(volunteers)) return [];
+    const collected = [];
+    volunteers.forEach(v => {
+      if (v.feedbacks && Array.isArray(v.feedbacks)) {
+        v.feedbacks.forEach(f => {
+          collected.push({
+            ...f,
+            volunteerName: v.volunteer?.name || 'Anonymous',
+            volunteerEmail: v.volunteer?.email || ''
+          });
+        });
+      }
+    });
+    // Sort by most recent first
+    return collected.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  }, [volunteers]);
+
+  const averageRating = React.useMemo(() => {
+    if (allFeedbacks.length === 0) return "0.0";
+    const sum = allFeedbacks.reduce((acc, curr) => acc + (curr.rating || 0), 0);
+    return (sum / allFeedbacks.length).toFixed(1);
+  }, [allFeedbacks]);
+
+  const handleDeleteFeedback = async (feedbackId) => {
+    if (!window.confirm('Are you sure you want to remove this feedback from public view?')) return;
+    try {
+      await apiCall(`/volunteers/feedback/${feedbackId}/moderate?organizerId=${authUser.userId}`, {
+        method: 'DELETE'
+      });
+      alert('Feedback removed successfully');
+      fetchEventData();
+    } catch (err) {
+      console.error('Failed to remove feedback:', err);
+      alert('Failed to remove feedback: ' + err.message);
     }
   };
 
@@ -154,31 +207,67 @@ export default function OrganizerEventDetails() {
           </div>
           
           <div className="flex items-center gap-3">
-             {event.status === 'DRAFT' && !isAdmin && (
-                <button 
-                  onClick={handlePublish}
-                  className="px-6 py-3.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl font-bold flex items-center gap-2 shadow-lg shadow-emerald-200 transition-all"
-                >
-                  <Send size={18} /> Publish
-                </button>
-             )}
+             {(() => {
+                const status = getEventStatus(
+                  event.startDate, 
+                  event.endDate, 
+                  event.startTime, 
+                  event.endTime, 
+                  event.status
+                );
+                
+                const isCancellable = status !== 'CANCELLED' && status !== 'COMPLETED';
+                const isEditable = status === 'DRAFT' || status === 'PENDING_APPROVAL' || status === 'UPCOMING' || status === 'REJECTED';
+                
+                return (
+                  <>
+                    {event.status === 'DRAFT' && !isAdmin && (
+                      <button 
+                        onClick={handlePublish}
+                        className="px-6 py-3.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl font-bold flex items-center gap-2 shadow-lg shadow-emerald-200 transition-all"
+                      >
+                        <Send size={18} /> Publish
+                      </button>
+                    )}
 
-             {event.status !== 'CANCELLED' && event.status !== 'COMPLETED' && (
-                 <button 
-                   onClick={handleCancelEvent}
-                   className="px-6 py-3.5 bg-red-50 hover:bg-red-100/80 text-red-600 border border-red-200 rounded-2xl font-bold flex items-center gap-2 transition-all"
-                 >
-                   <XOctagon size={18} /> Cancel
-                 </button>
-             )}
+                    {status !== 'CANCELLED' && (
+                      isCancellable ? (
+                        <button 
+                          onClick={handleCancelEvent}
+                          className="px-6 py-3.5 bg-red-50 hover:bg-red-100/80 text-red-600 border border-red-200 rounded-2xl font-bold flex items-center gap-2 transition-all"
+                        >
+                          <XOctagon size={18} /> Cancel
+                        </button>
+                      ) : (
+                        <div 
+                          title="Event has ended - Cancellation disabled"
+                          className="px-6 py-3.5 bg-gray-50 border border-gray-200 text-gray-400 rounded-2xl font-bold flex items-center gap-2 cursor-not-allowed opacity-60"
+                        >
+                          <XOctagon size={18} /> Cancel
+                        </div>
+                      )
+                    )}
 
-             <Link 
-               to={isAdmin ? `/admin/events/${event.id}/edit` : `/organizer/events/${event.id}/edit`}
-               className="flex items-center gap-2 px-6 py-3.5 bg-white border border-purple-200 text-purple-700 rounded-2xl font-black uppercase tracking-widest hover:bg-purple-50 transition-all shadow-sm group"
-             >
-               <Edit3 size={18} className="transition-transform group-hover:scale-110" />
-               <span>Edit</span>
-             </Link>
+                    {isEditable ? (
+                      <Link 
+                        to={isAdmin ? `/admin/events/${event.id}/edit` : `/organizer/events/${event.id}/edit`}
+                        className="flex items-center gap-2 px-6 py-3.5 bg-white border border-purple-200 text-purple-700 rounded-2xl font-black uppercase tracking-widest hover:bg-purple-50 transition-all shadow-sm group"
+                      >
+                        <Edit3 size={18} className="transition-transform group-hover:scale-110" />
+                        <span>Edit</span>
+                      </Link>
+                    ) : (
+                      <div 
+                        title="Event has started/ended - Edit disabled"
+                        className="flex items-center gap-2 px-6 py-3.5 bg-gray-50 border border-gray-200 text-gray-400 rounded-2xl font-black uppercase tracking-widest cursor-not-allowed opacity-60"
+                      >
+                        <Edit3 size={18} />
+                        <span>Edit</span>
+                      </div>
+                    )}
+                  </>
+                );
+             })()}
           </div>
         </div>
 
@@ -267,18 +356,6 @@ export default function OrganizerEventDetails() {
                     </div>
                   </div>
 
-                  <div className="flex items-start gap-4 p-5 rounded-3xl bg-pink-50/50 border border-pink-100 group/item">
-                    <div className="p-4 bg-white rounded-2xl shadow-md group-hover/item:scale-110 transition-transform">
-                      <Users className="w-6 h-6 text-pink-600" />
-                    </div>
-                    <div>
-                      <p className="text-xs font-black text-pink-400 capitalize tracking-widest mb-1">Quota</p>
-                      <p className="text-lg font-black text-gray-900 leading-tight">
-                        {event.requiredVolunteers} Spots Total
-                      </p>
-                      <p className="text-sm font-bold text-gray-500 mt-1">Target Community Impact</p>
-                    </div>
-                  </div>
                 </div>
               </div>
             </div>
@@ -311,26 +388,39 @@ export default function OrganizerEventDetails() {
                   </div>
                 </div>
 
-                {/* NEW: Explicit Presence Count */}
-                <div className="p-6 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-3xl border border-blue-100 flex items-center justify-between">
-                   <div>
-                      <p className="text-xs font-black text-blue-400 uppercase tracking-widest mb-1">Marked Present</p>
-                      <p className="text-3xl font-black text-blue-900">{volunteers.filter(v => v.status === 'ATTENDED').length}</p>
-                   </div>
-                   <CheckCircle2 className="w-10 h-10 text-blue-200" />
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="p-6 bg-gradient-to-br from-indigo-50 to-blue-50 rounded-3xl border border-indigo-100">
+                    <p className="text-3xl font-black text-indigo-600">{volunteers.filter(v => v.status === 'ATTENDED').length}</p>
+                    <p className="text-xs font-black text-indigo-400 uppercase tracking-widest mt-1">Present</p>
+                  </div>
+                  <div className="p-6 bg-gradient-to-br from-amber-50 to-orange-50 rounded-3xl border border-amber-100">
+                    <p className="text-3xl font-black text-amber-600">
+                      {averageRating}
+                    </p>
+                    <p className="text-xs font-black text-amber-400 uppercase tracking-widest mt-1">Avg Rating</p>
+                  </div>
                 </div>
 
-                <div className="p-6 bg-indigo-50/50 rounded-3xl border border-indigo-100 flex items-center justify-between">
+                <div className="p-6 bg-purple-50 rounded-3xl border border-purple-100 flex items-center justify-between">
                   <div>
-                    <p className="text-xs font-black text-indigo-400 uppercase tracking-widest mb-1">Volunteers Needed</p>
-                    <p className="text-2xl font-black text-indigo-900">{Math.max(0, event.requiredVolunteers - approvedCount)}</p>
+                    <p className="text-xs font-black text-purple-400 uppercase tracking-widest mb-1">Total Feedbacks</p>
+                    <p className="text-2xl font-black text-purple-900">{allFeedbacks.length} Reviews</p>
                   </div>
-                  <Users2 className="w-10 h-10 text-indigo-200" />
+                  <Star className="w-10 h-10 text-purple-200 fill-purple-200" />
+                </div>
+
+                {/* Relocated Quota/Capacity Info */}
+                <div className="p-6 bg-pink-50 rounded-3xl border border-pink-100 flex items-center justify-between">
+                    <div>
+                      <p className="text-xs font-black text-pink-400 uppercase tracking-widest mb-1">Total Capacity</p>
+                      <p className="text-2xl font-black text-pink-900">{event.requiredVolunteers} Spots</p>
+                    </div>
+                    <Users className="w-10 h-10 text-pink-200 fill-pink-200" />
                 </div>
               </div>
             </div>
 
-            <div className="bg-gradient-to-br from-indigo-600 to-purple-700 rounded-[2.5rem] shadow-2xl shadow-indigo-200 p-8 text-white relative overflow-hidden group">
+            {/* <div className="bg-gradient-to-br from-indigo-600 to-purple-700 rounded-[2.5rem] shadow-2xl shadow-indigo-200 p-8 text-white relative overflow-hidden group">
                <div className="relative z-10">
                 <h3 className="text-xl font-black mb-6">Quick Tools</h3>
                 <div className="space-y-4">
@@ -353,7 +443,7 @@ export default function OrganizerEventDetails() {
                <div className="absolute -bottom-10 -right-10 opacity-10 group-hover:scale-110 transition-transform">
                 <BarChart3 size={200} />
                </div>
-            </div>
+            </div> */}
           </div>
         </div>
 
@@ -419,6 +509,12 @@ export default function OrganizerEventDetails() {
                         }`}>
                           {v.status}
                         </span>
+                        {v.feedbacks && v.feedbacks.length > 0 && (
+                          <div className="mt-1 flex items-center gap-1 text-[10px] text-amber-600 font-bold uppercase">
+                            <Star size={10} className="fill-amber-400 text-amber-400" />
+                            {v.feedbacks.length} Feedback(s)
+                          </div>
+                        )}
                       </td>
                       <td className="px-10 py-6 text-right">
                         <div className="flex items-center justify-end gap-2 text-right">
@@ -442,12 +538,29 @@ export default function OrganizerEventDetails() {
                               </button>
                             </>
                           ) : (
-                            <Link 
-                              to={`/organizer/events/${event.id}/volunteers`}
-                              className="p-2.5 rounded-xl bg-white border border-gray-100 text-indigo-600 hover:bg-indigo-50 transition-all shadow-sm"
-                            >
-                              <Eye className="w-5 h-5" />
-                            </Link>
+                            <div className="flex items-center justify-end gap-2">
+                              <Link 
+                                to={`/organizer/events/${event.id}/volunteers`}
+                                className="p-2.5 rounded-xl bg-white border border-gray-100 text-indigo-600 hover:bg-indigo-50 transition-all shadow-sm"
+                              >
+                                <Eye className="w-5 h-5" />
+                              </Link>
+                              {v.status === 'ATTENDED' && (
+                                <button 
+                                  onClick={() => issueCertificate(v.id)}
+                                  disabled={!!v.certificateUrl}
+                                  className={`p-2 rounded-xl border transition-all shadow-sm flex items-center gap-1 ${
+                                    v.certificateUrl 
+                                      ? 'bg-emerald-50 border-emerald-100 text-emerald-600 opacity-70' 
+                                      : 'bg-white border-indigo-100 text-indigo-600 hover:bg-indigo-50'
+                                  }`}
+                                  title={v.certificateUrl ? "Certificate Issued" : "Give Certificate"}
+                                >
+                                  <Award className="w-5 h-5" />
+                                  <span className="text-[10px] font-black uppercase whitespace-nowrap">{v.certificateUrl ? 'Issued' : 'Award'}</span>
+                                </button>
+                              )}
+                            </div>
                           )}
                         </div>
                       </td>
@@ -461,6 +574,83 @@ export default function OrganizerEventDetails() {
                 <Link to={`/organizer/events/${event.id}/volunteers`} className="text-purple-600 font-black uppercase tracking-widest text-sm hover:underline">
                   View Remaining {volunteers.length - 10} Applicants →
                 </Link>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Volunteer Testimonials List */}
+        <div className="mt-12 bg-white/95 backdrop-blur-xl rounded-[2.5rem] shadow-2xl border border-purple-100 overflow-hidden">
+          <div className="px-10 py-8 border-b border-purple-100 bg-gradient-to-r from-purple-50/50 to-transparent">
+            <h2 className="text-2xl font-black text-gray-900 flex items-center justify-between gap-3 flex-wrap">
+              <div className="flex items-center gap-3">
+                <Star className="text-amber-500 fill-amber-500" />
+                Volunteer Testimonials
+              </div>
+              <div className="text-xs px-4 py-2 bg-purple-100 text-purple-700 rounded-2xl font-black uppercase tracking-widest border border-purple-200">
+                Feedback for: {event?.title || 'Unknown Event'}
+              </div>
+            </h2>
+          </div>
+          
+          <div className="p-8 lg:p-10">
+            {allFeedbacks.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                {allFeedbacks.map((f) => (
+                  <div key={f.id} className="p-8 bg-gray-50/50 rounded-[2rem] border border-gray-100 hover:border-purple-200 transition-all group relative overflow-hidden">
+                    {/* Decorative Background */}
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-purple-100/20 rounded-full -mr-16 -mt-16 blur-3xl group-hover:bg-purple-200/30 transition-colors" />
+                    
+                    <div className="flex justify-between items-start mb-6 relative z-10">
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 bg-gradient-to-br from-purple-600 to-indigo-600 rounded-2xl flex items-center justify-center text-white font-black text-lg shadow-lg transition-transform">
+                          {f.volunteerName?.charAt(0).toUpperCase()}
+                        </div>  
+                        <div>
+                          <p className="font-black text-gray-900 text-lg leading-tight">{f.volunteerName || 'Anonymous'}</p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <Clock size={12} className="text-gray-400" />
+                            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">{new Date(f.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</p>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="flex flex-col items-end gap-3">
+                        <div className="flex gap-0.5">
+                          {[1, 2, 3, 4, 5].map(star => (
+                            <Star 
+                              key={star} 
+                              size={16} 
+                              className={`${star <= (f.rating || 0) ? 'text-amber-400 fill-amber-400' : 'text-gray-200'}`} 
+                            />
+                          ))}
+                        </div>
+                        <button 
+                          onClick={() => handleDeleteFeedback(f.id)}
+                          className="flex items-center gap-2 px-3 py-1.5 bg-rose-50 text-rose-500 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-rose-100 transition-colors border border-rose-100"
+                          title="Remove Feedback"
+                        >
+                          <Trash2 size={12} />
+                          Remove
+                        </button>
+                      </div>
+                    </div>
+                    
+                    <div className="relative z-10">
+                      <p className="text-gray-600 font-medium italic leading-relaxed text-lg lg:text-xl">
+                        "{f.comment}"
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-20 bg-gray-50/50 rounded-3xl border border-dashed border-gray-200">
+                <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-sm">
+                  <Star className="text-gray-300" size={32} />
+                </div>
+                <p className="text-gray-500 font-bold">No testimonials submitted yet for this event.</p>
+                <p className="text-sm text-gray-400 mt-1 uppercase tracking-widest font-black">Once volunteers share their reviews, they will appear here</p>
               </div>
             )}
           </div>

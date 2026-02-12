@@ -4,6 +4,7 @@ import com.volunteerhub.model.*;
 import com.volunteerhub.repository.AttendanceRepository;
 import com.volunteerhub.repository.EventRepository;
 import com.volunteerhub.repository.EventVolunteerRepository;
+import com.volunteerhub.repository.FeedbackRepository;
 import com.volunteerhub.repository.UserRepository;
 import com.volunteerhub.service.EventVolunteerService;
 import lombok.RequiredArgsConstructor;
@@ -21,6 +22,10 @@ public class EventVolunteerServiceImpl implements EventVolunteerService {
     private final EventRepository eventRepository;
     private final UserRepository userRepository;
     private final AttendanceRepository attendanceRepository;
+    private final FeedbackRepository feedbackRepository;
+    private final com.volunteerhub.service.EmailService emailService;
+    private final com.volunteerhub.service.NotificationService notificationService;
+    private final com.volunteerhub.service.FileStorageService fileStorageService;
 
     @Override
     public EventVolunteer joinEvent(Long eventId, Long volunteerId) {
@@ -57,7 +62,24 @@ public class EventVolunteerServiceImpl implements EventVolunteerService {
         event.setCurrentVolunteers(event.getCurrentVolunteers() + 1);
         eventRepository.save(event);
 
-        return eventVolunteerRepository.save(eventVolunteer);
+        EventVolunteer saved = eventVolunteerRepository.save(eventVolunteer);
+        emailService.sendEventJoinRequestEmail(volunteer, event);
+
+        // Notify Volunteer
+        notificationService.createNotification(
+                volunteer,
+                "Application Submitted",
+                "Your application for '" + event.getTitle() + "' has been submitted.",
+                com.volunteerhub.model.Notification.NotificationType.INFO);
+
+        // Notify Organizer
+        notificationService.createNotification(
+                event.getOrganizer(),
+                "New Join Request",
+                volunteer.getName() + " has requested to join '" + event.getTitle() + "'.",
+                com.volunteerhub.model.Notification.NotificationType.INFO);
+
+        return saved;
     }
 
     @Override
@@ -75,7 +97,15 @@ public class EventVolunteerServiceImpl implements EventVolunteerService {
 
         ev.setStatus(EventVolunteer.VolunteerStatus.APPROVED);
         ev.setApprovedAt(LocalDateTime.now());
-        return eventVolunteerRepository.save(ev);
+        EventVolunteer savedEv = eventVolunteerRepository.save(ev);
+        // emailService.sendEventJoinAcceptedEmail(savedEv.getVolunteer(),
+        // savedEv.getEvent());
+        notificationService.createNotification(
+                savedEv.getVolunteer(),
+                "Application Approved",
+                "Your request to join the event '" + savedEv.getEvent().getTitle() + "' has been approved!",
+                Notification.NotificationType.SUCCESS);
+        return savedEv;
     }
 
     @Override
@@ -93,7 +123,16 @@ public class EventVolunteerServiceImpl implements EventVolunteerService {
 
         ev.setStatus(EventVolunteer.VolunteerStatus.REJECTED);
         ev.setRejectionReason(reason);
-        return eventVolunteerRepository.save(ev);
+        EventVolunteer saved = eventVolunteerRepository.save(ev);
+        emailService.sendEventJoinRejectedEmail(saved.getVolunteer(), saved.getEvent(), reason);
+
+        notificationService.createNotification(
+                saved.getVolunteer(),
+                "Application Rejected",
+                "Your application for '" + saved.getEvent().getTitle() + "' was not approved.",
+                com.volunteerhub.model.Notification.NotificationType.ERROR);
+
+        return saved;
     }
 
     @Override
@@ -110,14 +149,20 @@ public class EventVolunteerServiceImpl implements EventVolunteerService {
         }
 
         ev.setStatus(EventVolunteer.VolunteerStatus.REMOVED);
-        eventVolunteerRepository.save(ev);
+        EventVolunteer saved = eventVolunteerRepository.save(ev);
+        emailService.sendEventJoinRejectedEmail(saved.getVolunteer(), saved.getEvent(),
+                "You have been removed from this event by the organizer.");
+
+        notificationService.createNotification(
+                saved.getVolunteer(),
+                "Removed from Event",
+                "You have been removed from '" + saved.getEvent().getTitle() + "' by the organizer.",
+                com.volunteerhub.model.Notification.NotificationType.WARNING);
     }
 
     @Override
     public List<EventVolunteer> getEventVolunteers(Long eventId) {
-        Event event = eventRepository.findById(eventId)
-                .orElseThrow(() -> new RuntimeException("Event not found"));
-        return eventVolunteerRepository.findByEvent(event);
+        return eventVolunteerRepository.findByEventIdWithDetails(eventId);
     }
 
     @Override
@@ -185,5 +230,124 @@ public class EventVolunteerServiceImpl implements EventVolunteerService {
         }
 
         eventVolunteerRepository.delete(ev);
+    }
+
+    @Override
+    public Feedback submitFeedback(Long eventVolunteerId, Long volunteerId, String comment, Integer rating) {
+        EventVolunteer ev = eventVolunteerRepository.findById(eventVolunteerId)
+                .orElseThrow(() -> new RuntimeException("Volunteer registration not found"));
+
+        if (!ev.getVolunteer().getId().equals(volunteerId)) {
+            throw new RuntimeException("Unauthorized: You can only submit feedback for your own registration");
+        }
+
+        Feedback feedback = Feedback.builder()
+                .eventVolunteer(ev)
+                .comment(comment)
+                .rating(rating)
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        return feedbackRepository.save(feedback);
+    }
+
+    @Override
+    public Feedback updateFeedback(Long feedbackId, Long volunteerId, String comment, Integer rating) {
+        Feedback feedback = feedbackRepository.findById(feedbackId)
+                .orElseThrow(() -> new RuntimeException("Feedback not found"));
+
+        if (!feedback.getEventVolunteer().getVolunteer().getId().equals(volunteerId)) {
+            throw new RuntimeException("Unauthorized: You can only update your own feedback");
+        }
+
+        feedback.setComment(comment);
+        feedback.setRating(rating);
+        return feedbackRepository.save(feedback);
+    }
+
+    @Override
+    public void deleteFeedback(Long feedbackId, Long volunteerId) {
+        Feedback feedback = feedbackRepository.findById(feedbackId)
+                .orElseThrow(() -> new RuntimeException("Feedback not found"));
+
+        if (!feedback.getEventVolunteer().getVolunteer().getId().equals(volunteerId)) {
+            throw new RuntimeException("Unauthorized: You can only delete your own feedback");
+        }
+
+        feedbackRepository.delete(feedback);
+    }
+
+    @Override
+    public void deleteFeedbackByOrganizer(Long feedbackId, Long organizerId) {
+        Feedback feedback = feedbackRepository.findById(feedbackId)
+                .orElseThrow(() -> new RuntimeException("Feedback not found"));
+
+        // Check if the requester is the organizer of the event
+        if (!feedback.getEventVolunteer().getEvent().getOrganizer().getId().equals(organizerId)) {
+            throw new RuntimeException("Unauthorized: Only the event organizer can moderate feedback");
+        }
+
+        feedbackRepository.delete(feedback);
+    }
+
+    @Override
+    public EventVolunteer issueCertificate(Long eventVolunteerId, Long organizerId, String certificateUrl) {
+        EventVolunteer ev = eventVolunteerRepository.findById(eventVolunteerId)
+                .orElseThrow(() -> new RuntimeException("Volunteer registration not found"));
+
+        if (!ev.getEvent().getOrganizer().getId().equals(organizerId)) {
+            throw new RuntimeException("Unauthorized: Only the event organizer can issue certificates");
+        }
+
+        // Calculate attendance percentage
+        long totalRecords = ev.getAttendanceRecords().size();
+        long presentRecords = ev.getAttendanceRecords().stream()
+                .filter(a -> a.getStatus() == Attendance.AttendanceStatus.PRESENT)
+                .count();
+
+        // Check if volunteer has at least 75% attendance
+        if (totalRecords == 0) {
+            throw new RuntimeException("Cannot issue certificate: No attendance records found");
+        }
+
+        double attendancePercentage = (presentRecords * 100.0) / totalRecords;
+
+        if (attendancePercentage < 75.0) {
+            throw new RuntimeException(String.format(
+                    "Cannot issue certificate: Volunteer attendance is %.1f%%, minimum required is 75%%",
+                    attendancePercentage));
+        }
+
+        // Also check ATTENDED status as fallback
+        boolean hasAttended = presentRecords > 0 || ev.getStatus() == EventVolunteer.VolunteerStatus.ATTENDED;
+
+        if (!hasAttended) {
+            throw new RuntimeException("Cannot issue certificate: Volunteer has not attended the event");
+        }
+
+        ev.setCertificateUrl(certificateUrl);
+        ev.setCertificateIssuedAt(LocalDateTime.now());
+        EventVolunteer saved = eventVolunteerRepository.save(ev);
+        emailService.sendCertificationIssuedEmail(saved.getVolunteer(), saved.getEvent());
+
+        notificationService.createNotification(
+                saved.getVolunteer(),
+                "Certificate Earned",
+                "A certificate has been issued for '" + saved.getEvent().getTitle() + "'.",
+                com.volunteerhub.model.Notification.NotificationType.SUCCESS);
+
+        return saved;
+    }
+
+    @Override
+    public EventVolunteer issueCertificateWithFile(Long eventVolunteerId, Long organizerId,
+            org.springframework.web.multipart.MultipartFile file) throws java.io.IOException {
+        // Use existing validation logic by calling issueCertificate with a placeholder
+        // URL first
+        // or just copy the validation here. Let's reuse.
+
+        // Actually, let's just do the storage first, then call issueCertificate.
+        String certificateUrl = fileStorageService.storeCertificate(file, eventVolunteerId);
+        return issueCertificate(eventVolunteerId, organizerId, certificateUrl);
     }
 }

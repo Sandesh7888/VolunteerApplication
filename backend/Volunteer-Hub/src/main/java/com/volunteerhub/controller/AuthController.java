@@ -4,6 +4,7 @@ import com.volunteerhub.model.User;
 import com.volunteerhub.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.http.ResponseEntity;
 import java.util.Map;
 
 @RestController
@@ -49,5 +50,24 @@ public class AuthController {
         user.setPassword(newPassword); // Will be hashed by updateUser
         userService.updateUser(user.getId(), user);
         return Map.of("message", "Password Reset Successfully for " + email);
+    }
+
+    @PostMapping("/verify-otp")
+    public ResponseEntity<?> verifyOtp(@RequestParam String email, @RequestParam String otp) {
+        userService.verifyOtp(email, otp);
+        return ResponseEntity.ok("OTP verified successfully");
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<?> forgotPassword(@RequestParam String email) {
+        userService.generateForgotPasswordOtp(email);
+        return ResponseEntity.ok("Password reset OTP sent to your email");
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<?> resetPassword(@RequestParam String email, @RequestParam String otp,
+            @RequestParam String newPassword) {
+        userService.resetPassword(email, otp, newPassword);
+        return ResponseEntity.ok("Password reset successfully");
     }
 }

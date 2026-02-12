@@ -2,7 +2,9 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useApi } from '../../../useApi';
-import { Loader2, X, Save, ArrowLeft } from 'lucide-react';
+import { useAuth } from '../../auth/hooks/useAuth';
+import { Loader2, X, Save, ArrowLeft, ShieldAlert } from 'lucide-react';
+import { getEventStatus } from '../../../utils/formatters';
 
 const EditEvent = () => {
   const { id } = useParams();
@@ -38,6 +40,23 @@ const EditEvent = () => {
 
       if (!eventData) {
         throw new Error('Event not found or access denied');
+      }
+
+      // ✅ PROTECTION: PREVENT EDITING STARTED EVENTS
+      const status = getEventStatus(
+        eventData.startDate, 
+        eventData.endDate, 
+        eventData.startTime, 
+        eventData.endTime, 
+        eventData.status
+      );
+      
+      const isEditable = status === 'DRAFT' || status === 'PENDING_APPROVAL' || status === 'UPCOMING' || status === 'REJECTED';
+      
+      if (!isEditable) {
+        setError('This event has already started or ended and cannot be edited.');
+        setFormData({ id: 'invalid' }); // Prevent form from showing
+        return;
       }
 
       setFormData({
@@ -111,7 +130,7 @@ const EditEvent = () => {
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 to-indigo-100">
         <div className="text-center p-12 max-w-md mx-auto bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl border border-purple-200">
           <div className="w-24 h-24 bg-red-100 rounded-3xl flex items-center justify-center mx-auto mb-6">
-            <X className="w-12 h-12 text-red-500" />
+            {error?.includes('started') ? <ShieldAlert className="w-12 h-12 text-red-500" /> : <X className="w-12 h-12 text-red-500" />}
           </div>
           <h2 className="text-3xl font-bold text-gray-900 mb-4">{error || 'Event Not Found'}</h2>
           <p className="text-gray-600 mb-8">The event you're looking for doesn't exist or you don't have permission.</p>

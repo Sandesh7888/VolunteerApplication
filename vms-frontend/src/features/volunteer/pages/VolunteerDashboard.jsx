@@ -18,6 +18,7 @@ const VolunteerDashboard = () => {
     totalHours: 0,
     pendingApplications: 0,
     completedEvents: 0,
+    activeMissions: 0,
     points: 0
   });
   const [recentEvents, setRecentEvents] = useState([]);
@@ -41,41 +42,52 @@ const VolunteerDashboard = () => {
         apiCall('/events/available')
       ]);
       
-      const attended = history.filter(h => h.status === 'ATTENDED');
-      const approved = history.filter(h => h.status === 'APPROVED');
-      const pending = history.filter(h => h.status === 'PENDING');
+      console.log('DASHBOARD DATA | History:', history);
+      console.log('DASHBOARD DATA | Available:', available);
+      
+      const attended = (history || []).filter(h => h.status === 'ATTENDED');
+      const approved = (history || []).filter(h => h.status === 'APPROVED');
+      const pending = (history || []).filter(h => h.status === 'PENDING');
 
-      setStats({
-        totalEvents: history.length,
-        totalHours: attended.reduce((acc, h) => acc + (h.event.durationHours || 4), 0),
-        pendingApplications: pending.length,
-        completedEvents: attended.length,
-        points: user?.points || 0
-      });
-
-      // 1. Process Live Approved Events (For Hero Banner)
-      const live = history.filter(item => {
-        const status = getEventStatus(
+      const activeList = (history || []).filter(item => {
+        const s = getEventStatus(
           item.event.startDate, 
           item.event.endDate, 
           item.event.startTime, 
           item.event.endTime,
           item.event.status
         );
-        return item.status === 'APPROVED' && status === 'LIVE';
+        // Be more inclusive: if it's LIVE or today's UPCOMING mission, show it as active for the volunteer
+        const isToday = new Date(item.event.startDate).toDateString() === new Date().toDateString();
+        return item.status === 'APPROVED' && (s === 'LIVE' || isToday);
       });
-      setActiveEvents(live);
 
-      // 2. Process Live Opportunities (Available events happening now)
-      const now = new Date();
+      setStats({
+        totalEvents: (history || []).length,
+        totalHours: attended.reduce((acc, h) => acc + (h.event.durationHours || 4), 0),
+        pendingApplications: pending.length,
+        completedEvents: attended.length,
+        activeMissions: activeList.length,
+        points: user?.points || 0
+      });
+
+      // 1. Process Live Approved Events (Joined)
+      setActiveEvents(activeList);
+
+      // 2. Process Live Opportunities (Available & Ongoing)
       const opportunities = (available || []).filter(event => {
         const isJoined = history.some(h => h.event.id === event.id);
         if (isJoined) return false;
 
-        const regOpen = event.registrationOpenDateTime ? new Date(event.registrationOpenDateTime) : null;
-        const regClose = event.registrationCloseDateTime ? new Date(event.registrationCloseDateTime) : null;
-        return (!regOpen || now >= regOpen) && (!regClose || now <= regClose);
-      }).slice(0, 3);
+        const status = getEventStatus(
+          event.startDate,
+          event.endDate,
+          event.startTime,
+          event.endTime,
+          event.status
+        );
+        return status === 'LIVE';
+      });
       setLiveOpportunities(opportunities);
 
       // 3. Process Schedule
@@ -164,69 +176,14 @@ const VolunteerDashboard = () => {
           </div>
         </header>
 
-        {/* 1. LIVE HERO EVENT (If any) */}
-        {activeEvents.length > 0 && (
-          <section className="relative overflow-hidden rounded-[3rem] bg-slate-900 text-white shadow-2xl shadow-emerald-900/20 group">
-            <div className="absolute inset-0 bg-gradient-to-r from-emerald-600/20 to-indigo-600/20 mix-blend-overlay" />
-            <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/10 rounded-full blur-[100px] -mr-32 -mt-32" />
-            
-            <div className="relative p-8 lg:p-12 flex flex-col lg:flex-row items-center justify-between gap-10">
-              <div className="flex-1">
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="flex items-center gap-2 px-4 py-1.5 bg-emerald-500 text-white rounded-full text-xs font-black uppercase tracking-widest animate-pulse">
-                     <span className="w-2 h-2 bg-white rounded-full shadow-[0_0_8px_white]" />
-                     Live Now
-                  </div>
-                  <span className="text-emerald-200 font-bold text-sm tracking-tight opacity-80">Ongoing Operation</span>
-                </div>
-                
-                <h2 className="text-4xl lg:text-5xl font-black mb-4 tracking-tight leading-[1.1]">
-                  {activeEvents[0].event.title}
-                </h2>
-                
-                <div className="flex flex-wrap gap-6 text-emerald-100/80 mb-8">
-                   <div className="flex items-center gap-2">
-                     <MapPin size={20} className="text-emerald-400" />
-                     <span className="font-bold">{activeEvents[0].event.locationName}</span>
-                   </div>
-                   <div className="flex items-center gap-2">
-                     <Clock size={20} className="text-emerald-400" />
-                     <span className="font-bold">Ends at {activeEvents[0].event.endTime || '18:00'}</span>
-                   </div>
-                </div>
-
-                <div className="flex items-center gap-4">
-                  <button 
-                    onClick={() => navigate(`/volunteer/events/${activeEvents[0].event.id}`)}
-                    className="px-8 py-4 bg-white text-slate-900 font-black rounded-2xl shadow-xl hover:scale-105 active:scale-95 transition-all flex items-center gap-3 uppercase text-xs tracking-widest"
-                  >
-                    Manage Participation <ArrowRight size={18} />
-                  </button>
-                  <button className="p-4 bg-emerald-500/20 backdrop-blur-md rounded-2xl hover:bg-emerald-500/40 transition-colors">
-                     <Zap size={24} className="text-emerald-400" />
-                  </button>
-                </div>
-              </div>
-
-              <div className="hidden xl:flex w-72 h-72 bg-white/5 rounded-[4rem] border border-white/10 backdrop-blur-xl items-center justify-center relative overflow-hidden group-hover:rotate-3 transition-transform duration-500">
-                 <Activity size={120} className="text-emerald-500 opacity-20 absolute" />
-                 <div className="text-center relative z-10">
-                   <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest mb-1">Impact Multiplier</p>
-                   <p className="text-6xl font-black">2.5<span className="text-2xl text-emerald-500">x</span></p>
-                   <p className="text-[10px] font-black text-white/40 uppercase tracking-tight mt-1">Live Event Bonus</p>
-                 </div>
-              </div>
-            </div>
-          </section>
-        )}
 
         {/* 2. STATS GRID (Glassmorphismish) */}
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-5">
            {[
-             { label: 'Network Reach', value: stats.totalEvents, icon: Users, color: 'text-blue-600', bg: 'bg-blue-50' },
+             { label: 'Active Missions', value: stats.activeMissions, icon: Zap, color: 'text-rose-600', bg: 'bg-rose-50' },
              { label: 'Time Donated', value: `${stats.totalHours}H`, icon: Clock, color: 'text-emerald-600', bg: 'bg-emerald-50' },
-             { label: 'Active Pipeline', value: stats.pendingApplications, icon: Target, color: 'text-orange-600', bg: 'bg-orange-50' },
-             { label: 'Operations', value: stats.completedEvents, icon: ShieldCheck, color: 'text-indigo-600', bg: 'bg-indigo-50' },
+             { label: 'Pending App', value: stats.pendingApplications, icon: Target, color: 'text-orange-600', bg: 'bg-orange-50' },
+             { label: 'Completed', value: stats.completedEvents, icon: CheckCircle, color: 'text-indigo-600', bg: 'bg-indigo-50' },
              { label: 'Social Capital', value: stats.points, icon: Sparkles, color: 'text-amber-600', bg: 'bg-amber-50' }
            ].map((stat, i) => (
              <div key={i} className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group">
@@ -263,7 +220,7 @@ const VolunteerDashboard = () => {
               </div>
               
               <div className="h-[300px] w-full">
-                <ResponsiveContainer width="100%" height="100%">
+                <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                   <AreaChart data={chartData}>
                     <defs>
                       <linearGradient id="impactGrad" x1="0" y1="0" x2="0" y2="1">
@@ -291,7 +248,7 @@ const VolunteerDashboard = () => {
                     <Heart className="text-rose-500" size={18} /> Cause Affinity
                   </h3>
                   <div className="h-[220px]">
-                    <ResponsiveContainer width="100%" height="100%">
+                    <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                       <PieChart>
                         <Pie
                           data={categoryData}
@@ -318,43 +275,107 @@ const VolunteerDashboard = () => {
                   </div>
                </div>
 
-               {/* 5. Live Opportunities */}
-               <div className="bg-slate-900 p-8 rounded-[3rem] shadow-2xl relative overflow-hidden">
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 blur-[50px]" />
-                  <h3 className="text-lg font-black text-white mb-6 flex items-center gap-2 relative z-10">
-                    <Zap className="text-amber-400" size={18} /> Quick Impact
+               {/* 5. Placeholder / Info Card */}
+               <div className="bg-gradient-to-br from-indigo-500 to-purple-600 p-8 rounded-[3rem] shadow-2xl relative overflow-hidden group hover:scale-[1.02] transition-all">
+                  <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <Sparkles className="text-indigo-200 opacity-20 absolute bottom-0 right-0 -mr-4 -mb-4" size={150} />
+                  <h3 className="text-xl font-black text-white mb-4 relative z-10 flex items-center gap-2">
+                    <Target size={24} /> Elite Status
                   </h3>
-                  <div className="space-y-4 relative z-10">
-                    {liveOpportunities.length === 0 ? (
-                      <p className="text-slate-500 font-bold italic text-sm">No live options at this second</p>
-                    ) : (
-                      liveOpportunities.map(opp => (
-                        <div key={opp.id} className="p-4 bg-white/5 rounded-2xl border border-white/10 hover:bg-white/10 transition-colors group">
-                           <div className="flex items-center justify-between mb-2">
-                             <span className="text-[10px] font-black text-amber-400 uppercase tracking-widest">{opp.category}</span>
-                             <div className="flex items-center gap-1">
-                               <Users size={12} className="text-slate-500" />
-                               <span className="text-[10px] font-bold text-slate-400">{opp.currentVolunteers}/{opp.requiredVolunteers}</span>
-                             </div>
-                           </div>
-                           <h4 className="text-sm font-black text-white mb-3 line-clamp-1">{opp.title}</h4>
-                           <Link 
-                             to="/volunteer/browse-events" 
-                             className="w-full py-2 bg-white text-slate-900 text-[10px] font-black uppercase tracking-widest rounded-xl block text-center group-hover:bg-amber-400 transition-colors"
-                           >
-                             Join Now
-                           </Link>
-                        </div>
-                      ))
-                    )}
-                  </div>
+                  <p className="text-white/80 text-sm font-medium mb-8 relative z-10">
+                    You are in the top tier of contributors. Keep hosting missions to maintain your impact multiplier and unlock exclusive rewards.
+                  </p>
+                  <button className="w-full py-4 bg-white text-indigo-600 font-black rounded-2xl text-[10px] uppercase tracking-widest relative z-10 hover:bg-indigo-50 transition-colors">
+                    Explore Rewards
+                  </button>
                </div>
             </div>
           </div>
 
           {/* SIDEBAR: NEXT TASKS / SCHEDULE */}
           <div className="space-y-8">
-             <div className="bg-white p-8 rounded-[3rem] border border-slate-100 shadow-sm h-full">
+             {/* LIVE OPERATIONS CENTER (SIDEBAR INTEGRATION) */}
+             <div className="bg-slate-900 p-8 rounded-[3rem] shadow-2xl relative overflow-hidden group">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 blur-[50px]" />
+                <div className="flex items-center justify-between mb-6 relative z-10">
+                   <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-rose-500 rounded-full animate-pulse shadow-[0_0_8px_#f43f5e]" />
+                      <h3 className="text-lg font-black text-white uppercase italic tracking-wider">Active Missions</h3>
+                   </div>
+                   {(activeEvents.length > 0 || liveOpportunities.length > 0) && (
+                     <span className="text-[10px] font-black text-slate-500 truncate max-w-[100px] uppercase">{activeEvents.length + liveOpportunities.length} Total</span>
+                   )}
+                </div>
+
+                <div className="space-y-4 relative z-10">
+                  {/* Joined Missions First */}
+                  {activeEvents.map(item => (
+                    <div key={item.id} className="p-4 bg-emerald-500/10 rounded-2xl border border-emerald-500/20 hover:bg-emerald-500/20 transition-all cursor-pointer group/card"
+                         onClick={() => navigate(`/volunteer/events/${item.event.id}`)}>
+                       <div className="flex justify-between items-start mb-2">
+                          <span className="text-[10px] font-black text-emerald-400 uppercase">Deployed Mission</span>
+                          <ArrowRight size={12} className="text-emerald-500 group-hover/card:translate-x-1 transition-transform" />
+                       </div>
+                       <h4 className="text-sm font-black text-white mb-2 line-clamp-1">{item.event.title}</h4>
+                       
+                       {/* Date & Time Row */}
+                       <div className="flex flex-wrap gap-x-4 gap-y-1 mb-2">
+                          <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400">
+                             <Calendar size={12} className="text-emerald-500" />
+                             {new Date(item.event.startDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                          </div>
+                          <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400">
+                             <Clock size={12} className="text-emerald-500" />
+                             {item.event.startTime || '12:00 PM'} - {item.event.endTime || '18:00'}
+                          </div>
+                       </div>
+
+                       <div className="flex items-center gap-3 text-[10px] font-bold text-slate-500">
+                          <div className="flex items-center gap-1"><MapPin size={10} /> {item.event.locationName}</div>
+                       </div>
+                    </div>
+                  ))}
+
+                  {/* Urgent Opportunities */}
+                  {liveOpportunities.map(opp => (
+                    <div key={opp.id} className="p-4 bg-white/5 rounded-2xl border border-white/10 hover:bg-white/10 transition-all cursor-pointer group/card"
+                         onClick={() => navigate(`/volunteer/events/${opp.id}`)}>
+                       <div className="flex justify-between items-start mb-2">
+                          <span className="text-[10px] font-black text-rose-400 uppercase italic flex items-center gap-1"><Zap size={10} /> Urgent: Ongoing</span>
+                          <ArrowRight size={12} className="text-slate-500 group-hover/card:translate-x-1 transition-transform" />
+                       </div>
+                       <h4 className="text-sm font-black text-white mb-2 line-clamp-1">{opp.title}</h4>
+                       
+                       {/* Date & Time Row */}
+                       <div className="flex flex-wrap gap-x-4 gap-y-1 mb-2">
+                          <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400">
+                             <Calendar size={12} className="text-rose-500" />
+                             {new Date(opp.startDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                          </div>
+                          <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400">
+                             <Clock size={12} className="text-rose-500" />
+                             {opp.startTime || '12:00 PM'}
+                          </div>
+                       </div>
+
+                       <div className="flex items-center gap-3 text-[10px] font-bold text-slate-500">
+                          <div className="flex items-center gap-1"><Users size={10} /> {opp.currentVolunteers}/{opp.requiredVolunteers}</div>
+                          <div className="flex items-center gap-1 text-emerald-500/80"><TrendingUp size={10} /> 2x Bonus</div>
+                       </div>
+                    </div>
+                  ))}
+
+                  {activeEvents.length === 0 && liveOpportunities.length === 0 && (
+                    <div className="py-6 text-center border border-dashed border-white/10 rounded-2xl">
+                      <Activity size={24} className="text-slate-700 mx-auto mb-2 opacity-50" />
+                      <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest">No Active Missions</p>
+                      <p className="text-[9px] font-bold text-slate-700 mt-1">Check the timeline for upcoming work</p>
+                    </div>
+                  )}
+                </div>
+             </div>
+
+             <div className="bg-white p-8 rounded-[3rem] border border-slate-100 shadow-sm">
                 <div className="flex items-center justify-between mb-8">
                   <h3 className="text-xl font-black text-slate-900 tracking-tight">Timeline</h3>
                   <Link to="/volunteer/my-events" className="p-2 bg-slate-50 text-slate-400 hover:text-emerald-600 rounded-xl transition-colors">

@@ -4,9 +4,11 @@ import { useParams, Link } from 'react-router-dom';
 import { useApi } from '../../../useApi';
 import { useAuth } from '../../../features/auth/hooks/useAuth';
 import { 
-   ArrowLeft, Calendar, MapPin, Clock, Tag, Users, Eye, Share2, Heart, MessageSquare, ShieldCheck, UserCheck, ShieldAlert
+   ArrowLeft, Calendar, MapPin, Clock, Tag, Users, Eye, Share2, Heart, MessageSquare, ShieldCheck, UserCheck, ShieldAlert, Download, Star, Award
 } from 'lucide-react';
 import { formatTime } from '../../../utils/formatters';
+import FeedbackModal from '../components/FeedbackModal';
+import CertificateModal from '../components/CertificateModal';
 
 export default function VolunteerEventDetails() {
   const { eventId } = useParams();
@@ -14,13 +16,18 @@ export default function VolunteerEventDetails() {
   const [event, setEvent] = useState(null);
   const [loading, setLoading] = useState(true);
   const [volunteers, setVolunteers] = useState([]);
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const { apiCall } = useApi();
+
+  const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
+  const [editingFeedback, setEditingFeedback] = useState(null);
+  const [isCertModalOpen, setIsCertModalOpen] = useState(false);
 
   useEffect(() => {
     if (eventId) {
       fetchEventDetails();
     }
+    refreshUser();
   }, [eventId]);
 
   // Countdown Logic
@@ -65,7 +72,13 @@ export default function VolunteerEventDetails() {
         const foundItem = eventsData.find(item => item.event.id == eventId);
         
         if (foundItem) {
-          eventData = foundItem.event;
+          eventData = {
+            ...foundItem.event,
+            registrationId: foundItem.id,
+            feedbacks: foundItem.feedbacks || [],
+            certificateUrl: foundItem.certificateUrl,
+            participationStatus: foundItem.status
+          };
           participationStatus = foundItem.status;
         }
       } catch (err) {
@@ -102,6 +115,20 @@ export default function VolunteerEventDetails() {
       console.error('Event fetch error:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDeleteFeedback = async (feedbackId) => {
+    if (!window.confirm('Are you sure you want to delete your feedback?')) return;
+    try {
+      await apiCall(`/volunteers/feedback/${feedbackId}?volunteerId=${user.userId}`, {
+        method: 'DELETE'
+      });
+      alert('Feedback deleted successfully');
+      fetchEventDetails();
+    } catch (err) {
+      console.error('Failed to delete feedback:', err);
+      alert('Failed to delete feedback');
     }
   };
 
@@ -364,7 +391,7 @@ export default function VolunteerEventDetails() {
             {/* RIGHT: Sidebar */}
             <div className="lg:col-span-1 space-y-6">
               {/* Progress Card */}
-              <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-200 sticky top-24">
+              <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
                 <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
                   <Users className="w-5 h-5 text-purple-500" />
                   Volunteer Capacity
@@ -413,25 +440,34 @@ export default function VolunteerEventDetails() {
 
                     if (isApplied) return null; // Already joined, show nothing or different action
 
+                    const isVerified = user?.documentsVerified;
+
                     return (
-                      <button
-                        disabled={isRegNotStarted || isRegClosed || isFull}
-                        className={`w-full block p-4 font-bold rounded-xl text-center shadow-lg transition-all flex items-center justify-center gap-3 py-3 ${
-                          isRegNotStarted || isRegClosed || isFull
-                            ? 'bg-gray-100 text-gray-500 cursor-not-allowed'
-                            : 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white hover:shadow-xl transform hover:-translate-y-1'
-                        }`}
-                      >
-                        {isRegNotStarted ? (
-                          <>Wait (Opens {regOpen.toLocaleDateString('en-IN')})</>
-                        ) : isRegClosed ? (
-                          <>Registration Closed</>
-                        ) : isFull ? (
-                          <>Event Full</>
-                        ) : (
-                          <>Join Event Now</>
+                      <div className="space-y-3">
+                        <button
+                          disabled={isRegNotStarted || isRegClosed || isFull}
+                          className={`w-full block p-4 font-bold rounded-xl text-center shadow-lg transition-all flex items-center justify-center gap-3 py-3 ${
+                            isRegNotStarted || isRegClosed || isFull
+                              ? 'bg-gray-100 text-gray-500 cursor-not-allowed border border-gray-200'
+                              : 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white hover:shadow-xl transform hover:-translate-y-1'
+                          }`}
+                        >
+                          {isRegNotStarted ? (
+                            <>Wait (Opens {regOpen.toLocaleDateString('en-IN')})</>
+                          ) : isRegClosed ? (
+                            <>Registration Closed</>
+                          ) : isFull ? (
+                            <>Event Full</>
+                          ) : (
+                            <>Join Event Now</>
+                          )}
+                        </button>
+                        {!isVerified && (
+                          <p className="text-[10px] text-amber-600 font-bold text-center px-4 leading-tight">
+                            Note: Your documents are not yet verified. You can still join, but verification is recommended.
+                          </p>
                         )}
-                      </button>
+                      </div>
                     );
                   })()}
                   <Link
@@ -450,6 +486,99 @@ export default function VolunteerEventDetails() {
                   </button>
                 </div>
               </div>
+
+              {/* Feedback & Certificate Actions (Side View) */}
+              {(() => {
+                const now = new Date();
+                const end = new Date((event.endDate || event.startDate) + 'T' + (event.endTime || '23:59'));
+                const isCompleted = now > end || event.participationStatus === 'ATTENDED';
+                
+                if (!isCompleted || !event.participationStatus) return null;
+
+                return (
+                  <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-200 space-y-4">
+                    <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                      <ShieldCheck className="w-5 h-5 text-emerald-500" />
+                      Post-Event Actions
+                    </h3>
+
+                    {/* Certificate (New & Improved) */}
+                    {/* Certificate Logic: Unlocks only if Attended AND Feedback written */}
+                    {event.participationStatus === 'ATTENDED' && (
+                      event.feedbacks && event.feedbacks.length > 0 ? (
+                        <button
+                          onClick={() => setIsCertModalOpen(true)}
+                          className="flex items-center justify-center gap-3 w-full py-4 bg-gradient-to-r from-emerald-600 to-teal-600 text-white hover:from-emerald-700 hover:to-teal-700 font-black rounded-2xl shadow-xl hover:shadow-emerald-200/50 transition-all transform hover:-translate-y-1 uppercase text-xs tracking-widest"
+                        >
+                          <Award size={20} className="animate-bounce" />
+                          View Certificate
+                        </button>
+                      ) : (
+                        <div className="text-center p-4 bg-amber-50 rounded-2xl border border-amber-200">
+                           <p className="text-amber-800 font-bold text-sm mb-2 flex items-center justify-center gap-2">
+                             <Award size={16} /> Certificate Locked
+                           </p>
+                           <p className="text-xs text-amber-700">
+                             Submit your feedback below to unlock your certificate of appreciation.
+                           </p>
+                        </div>
+                      )
+                    )}
+
+                    <div className="h-px bg-gray-100 my-4" />
+
+                    {/* Feedback */}
+                    <button
+                      onClick={() => {
+                        setEditingFeedback(null);
+                        setIsFeedbackModalOpen(true);
+                      }}
+                      className="flex items-center justify-center gap-2 w-full py-3 bg-blue-50 text-blue-600 hover:bg-blue-100 font-bold rounded-2xl border-2 border-blue-200 transition-all"
+                    >
+                      <MessageSquare size={18} />
+                      Add Review
+                    </button>
+
+                    {event.feedbacks && event.feedbacks.length > 0 && (
+                      <div className="space-y-3 mt-4">
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">Your Reviews ({event.feedbacks.length})</p>
+                        {event.feedbacks.map((f) => (
+                          <div key={f.id} className="p-4 bg-gray-50 rounded-2xl border border-gray-100 group/feed">
+                            <div className="flex justify-between items-start mb-2">
+                              <div className="flex">
+                                {[1, 2, 3, 4, 5].map(s => (
+                                  <Star key={s} size={10} className={s <= f.rating ? "fill-amber-400 text-amber-400" : "text-gray-200"} />
+                                ))}
+                              </div>
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={() => {
+                                    setEditingFeedback(f);
+                                    setIsFeedbackModalOpen(true);
+                                  }}
+                                  className="text-[10px] font-black text-blue-500 uppercase hover:underline"
+                                >
+                                  Edit
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteFeedback(f.id)}
+                                  className="text-[10px] font-black text-rose-500 uppercase hover:underline"
+                                >
+                                  Delete
+                                </button>
+                              </div>
+                            </div>
+                            <p className="text-sm text-gray-600 italic">"{f.comment}"</p>
+                            <p className="text-[10px] text-gray-400 mt-2 font-bold uppercase tracking-tighter">
+                               {new Date(f.createdAt).toLocaleDateString()}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
           </div>
         ) : (
@@ -468,6 +597,26 @@ export default function VolunteerEventDetails() {
           </div>
         )}
       </div>
+      <FeedbackModal
+        isOpen={isFeedbackModalOpen}
+        onClose={() => {
+          setIsFeedbackModalOpen(false);
+          setEditingFeedback(null);
+        }}
+        event={{
+          ...event,
+          volunteerId: user.userId
+        }}
+        initialData={editingFeedback}
+        onSuccess={fetchEventDetails}
+      />
+
+      <CertificateModal 
+        isOpen={isCertModalOpen}
+        onClose={() => setIsCertModalOpen(false)}
+        volunteerName={user?.name}
+        event={event}
+      />
     </div>
   );
 }

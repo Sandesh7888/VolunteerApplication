@@ -12,6 +12,7 @@ import java.util.List;
 @CrossOrigin(origins = { "http://localhost:5173", "http://127.0.0.1:5173" }, allowCredentials = "true")
 public class AdminEventController {
     private final EventRepository eventRepository;
+    private final com.volunteerhub.service.EventService eventService;
 
     // 🔥 PENDING EVENTS
     @GetMapping("/pending")
@@ -28,19 +29,13 @@ public class AdminEventController {
     // ✅ APPROVE EVENT
     @PatchMapping("/{id}/approve")
     public Event approveEvent(@PathVariable Long id) {
-        Event event = eventRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Event not found"));
-        event.setStatus(Event.EventStatus.PUBLISHED);
-        return eventRepository.save(event);
+        return eventService.approveEvent(id);
     }
 
     // ❌ REJECT EVENT
     @PatchMapping("/{id}/reject")
     public Event rejectEvent(@PathVariable Long id) {
-        Event event = eventRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Event not found"));
-        event.setStatus(Event.EventStatus.REJECTED);
-        return eventRepository.save(event);
+        return eventService.rejectEvent(id);
     }
 
     // 🗑️ DELETE EVENT

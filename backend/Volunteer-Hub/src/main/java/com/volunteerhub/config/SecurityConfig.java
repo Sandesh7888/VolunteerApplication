@@ -32,16 +32,18 @@ public class SecurityConfig {
                         .anyRequest().permitAll())
 
                 // ❌ Disable basic auth to prevent preflight interference
-                .httpBasic(httpBasic -> httpBasic.disable());
+                .httpBasic(httpBasic -> httpBasic.disable())
 
+                // ✅ Disable X-Frame-Options to allow document preview in iframes
+                .headers(headers -> headers.frameOptions(frame -> frame.disable()));
         return http.build();
     }
 
     @Bean
     public org.springframework.web.cors.CorsConfigurationSource corsConfigurationSource() {
         org.springframework.web.cors.CorsConfiguration configuration = new org.springframework.web.cors.CorsConfiguration();
-        // Use setAllowedOriginPatterns for more flexibility
-        configuration.setAllowedOriginPatterns(java.util.List.of("http://localhost:5173", "http://127.0.0.1:5173"));
+        // Use wildcard pattern for localhost
+        configuration.setAllowedOriginPatterns(java.util.List.of("http://localhost:*", "http://127.0.0.1:*"));
         configuration.setAllowedMethods(java.util.List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(java.util.List.of("*")); // Allow all headers
         configuration.setAllowCredentials(true);

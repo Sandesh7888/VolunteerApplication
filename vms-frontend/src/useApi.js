@@ -24,16 +24,18 @@ export const useApi = () => {
 
 
 
+    const isFormData = options.body instanceof FormData;
+
     const config = {
       headers: {
-        "Content-Type": "application/json",
+        ...(isFormData ? {} : { "Content-Type": "application/json" }),
         ...options.headers,
       },
       credentials: "include",
       ...options,
     };
 
-    if (config.body && typeof config.body === 'object' && !(config.body instanceof FormData)) {
+    if (config.body && typeof config.body === 'object' && !isFormData) {
       config.body = JSON.stringify(config.body);
     }
 
@@ -42,6 +44,10 @@ export const useApi = () => {
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       throw new Error(errorData.message || `HTTP ${response.status}`);
+    }
+
+    if (options.responseType === 'blob') {
+      return response.blob();
     }
 
     const contentType = response.headers.get("content-type");

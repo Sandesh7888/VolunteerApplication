@@ -19,4 +19,10 @@ public interface UserService {
     List<User> getUsersByRole(User.Role role);
 
     java.util.Map<String, Object> getOrganizerDetails(Long id);
+
+    void verifyOtp(String email, String otp);
+
+    void generateForgotPasswordOtp(String email);
+
+    void resetPassword(String email, String otp, String newPassword);
 }

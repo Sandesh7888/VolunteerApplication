@@ -3,9 +3,9 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useApi } from "../../../useApi"; 
 import { useAuth } from "../../../features/auth/hooks/useAuth";
 import { Plus, Search, X, Eye, Edit2, Trash2, Calendar, MapPin, Users, Tag, Loader2, Users2, MoreVertical, CheckCircle, Clock } from 'lucide-react';
-// import { Plus, Search, X, Eye, Edit2, Trash2, Calendar, MapPin, Users, Tag, Loader2, Users2, MoreVertical, CheckCircle, Clock } from 'lucide-react';
 import { formatTime, getEventStatus } from '../../../utils/formatters';
 import { sortEvents } from '../../../utils/sorters';
+import VolunteerListModal from '../components/VolunteerListModal';
 
 export default function OrganizerEvents() {
   const { user } = useAuth();
@@ -16,6 +16,8 @@ export default function OrganizerEvents() {
   const [searchTerm, setSearchTerm] = useState('');
   const [searchOpen, setSearchOpen] = useState(false);
   const [pendingCounts, setPendingCounts] = useState({});
+  const [selectedEventId, setSelectedEventId] = useState(null);
+  const [isVolunteerModalOpen, setIsVolunteerModalOpen] = useState(false);
   const { apiCall } = useApi();
   const navigate = useNavigate();
 
@@ -85,6 +87,11 @@ export default function OrganizerEvents() {
       setSearchTerm('');
     }
     setSearchOpen(!searchOpen);
+  };
+
+  const openVolunteerModal = (eventId) => {
+    setSelectedEventId(eventId);
+    setIsVolunteerModalOpen(true);
   };
 
   // Status - ONLY TEXT COLOR, NO BORDER/BG
@@ -275,54 +282,74 @@ export default function OrganizerEvents() {
                       {/* STABLE HOVER MENU - NO ROW MOVEMENT */}
                       {/* ACTIONS - INLINE BUTTONS */}
                       <td className="px-3 sm:px-4 lg:px-6 py-4 text-right">
-                        <div className="flex items-center justify-end space-x-2">
-                          {event.status === 'PENDING_APPROVAL' && (
-                            <button 
-                              onClick={() => handleApproveEvent(event.id)}
-                              className="p-2 text-green-600 hover:text-green-800 hover:bg-green-50 rounded-lg transition-colors duration-200"
-                              title="Publish Event"
-                            >
-                              <CheckCircle size={18} />
-                            </button>
-                          )}
-                          <Link 
-                            to={`/organizer/events/${event.id}`}
-                            className="p-2 text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 rounded-lg transition-colors duration-200"
-                            title="View Details"
-                          >
-                            <Eye size={18} />
-                          </Link>
-                          <Link 
-                            to={`/organizer/events/${event.id}/volunteers`}
-                            className="relative p-2 text-emerald-600 hover:text-emerald-800 hover:bg-emerald-50 rounded-lg transition-colors duration-200"
-                            title="Manage Volunteers"
-                          >
-                            <Users2 size={18} />
-                            {pendingCounts[event.id] > 0 && (
-                              <span className="absolute -top-1 -right-1 flex h-4 w-4">
-                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                                <span className="relative inline-flex rounded-full h-4 w-4 bg-red-500 text-[10px] text-white items-center justify-center font-bold">
-                                  {pendingCounts[event.id]}
-                                </span>
-                              </span>
-                            )}
-                          </Link>                          
-                          <Link 
-                            to={`/organizer/events/${event.id}/edit`}
-                            className="p-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-colors duration-200"
-                            title="Edit Event"
-                          >
-                            <Edit2 size={18} />
-                          </Link>
-                          
-                          <button 
-                            onClick={() => handleDelete(event.id)}
-                            className="p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition-colors duration-200"
-                            title="Delete Event"
-                          >
-                            <Trash2 size={18} />
-                          </button>
-                        </div>
+                        {(() => {
+                           const status = getEventStatus(
+                             event.startDate, 
+                             event.endDate, 
+                             event.startTime, 
+                             event.endTime, 
+                             event.status
+                           );
+                           const isEditable = status === 'DRAFT' || status === 'PENDING_APPROVAL' || status === 'UPCOMING' || status === 'REJECTED';
+                           
+                           return (
+                            <div className="flex items-center justify-end space-x-2">
+                              {event.status === 'PENDING_APPROVAL' && (
+                                <button 
+                                  onClick={() => handleApproveEvent(event.id)}
+                                  className="p-2 text-green-600 hover:text-green-800 hover:bg-green-50 rounded-lg transition-colors duration-200"
+                                  title="Publish Event"
+                                >
+                                  <CheckCircle size={18} />
+                                </button>
+                              )}
+                              <Link 
+                                to={`/organizer/events/${event.id}`}
+                                className="p-2 text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 rounded-lg transition-colors duration-200"
+                                title="View Details"
+                              >
+                                <Eye size={18} />
+                              </Link>
+                              <button 
+                                onClick={() => openVolunteerModal(event.id)}
+                                className="relative p-2 text-emerald-600 hover:text-emerald-800 hover:bg-emerald-50 rounded-lg transition-colors duration-200"
+                                title="Manage Volunteers"
+                              >
+                                <Users2 size={18} />
+                                {pendingCounts[event.id] > 0 && (
+                                  <span className="absolute -top-1 -right-1 flex h-4 w-4">
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                    <span className="relative inline-flex rounded-full h-4 w-4 bg-red-500 text-[10px] text-white items-center justify-center font-bold">
+                                      {pendingCounts[event.id]}
+                                    </span>
+                                  </span>
+                                )}
+                              </button>
+                              
+                              {isEditable ? (
+                                <Link 
+                                  to={`/organizer/events/${event.id}/edit`}
+                                  className="p-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-colors duration-200"
+                                  title="Edit Event"
+                                >
+                                  <Edit2 size={18} />
+                                </Link>
+                              ) : (
+                                <div className="p-2 text-gray-300 cursor-not-allowed" title="Event has started/ended - Edit disabled">
+                                  <Edit2 size={18} />
+                                </div>
+                              )}
+                              
+                              <button 
+                                onClick={() => handleDelete(event.id)}
+                                className="p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition-colors duration-200"
+                                title="Delete Event"
+                              >
+                                <Trash2 size={18} />
+                              </button>
+                            </div>
+                           );
+                        })()}
                       </td>
                     </tr>
                   ))}
@@ -342,6 +369,15 @@ export default function OrganizerEvents() {
           scrollbar-width: none;
         }
       `}</style>
+
+      <VolunteerListModal 
+        isOpen={isVolunteerModalOpen}
+        onClose={() => {
+          setIsVolunteerModalOpen(false);
+          fetchMyEvents(); // Refresh counts when closing
+        }}
+        eventId={selectedEventId}
+      />
     </div>
   );
 }

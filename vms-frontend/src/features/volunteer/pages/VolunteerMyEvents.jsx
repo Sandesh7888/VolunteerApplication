@@ -4,10 +4,12 @@ import { Link } from 'react-router-dom';
 import { useApi } from '../../../useApi';
 import { useAuth } from '../../../features/auth/hooks/useAuth';
 import { 
-  Calendar, MapPin, Users, Tag, Clock, Eye, Clock as ClockIcon, Search 
+  Calendar, MapPin, Users, Tag, Clock, Eye, Clock as ClockIcon, Search, Star
 } from 'lucide-react';
 import { sortEvents } from '../../../utils/sorters';
 import { getEventStatus } from '../../../utils/formatters';
+import FeedbackModal from '../components/FeedbackModal';
+import { MessageSquare, Download } from 'lucide-react';
 
 export default function VolunteerMyEvents() {
   const [events, setEvents] = useState([]);
@@ -16,6 +18,9 @@ export default function VolunteerMyEvents() {
   const [searchTerm, setSearchTerm] = useState('');
   const { user } = useAuth();
   const { apiCall } = useApi();
+  const [selectedEvent, setSelectedEvent] = useState(null);
+  const [editingFeedback, setEditingFeedback] = useState(null);
+  const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
 
   useEffect(() => {
     fetchEvents();
@@ -30,8 +35,11 @@ export default function VolunteerMyEvents() {
       const eventsWithStatus = history.map(item => ({
         ...item.event,
         registrationId: item.id,
+        volunteerId: user.userId,
         participationStatus: item.status, 
-        registeredAt: item.joinedAt
+        registeredAt: item.joinedAt,
+        feedbacks: item.feedbacks || [],
+        certificateUrl: item.certificateUrl
       }));
       
       setEvents(sortEvents(eventsWithStatus, 'startDate'));
@@ -51,6 +59,18 @@ export default function VolunteerMyEvents() {
     } catch (err) {
       console.error('Failed to cancel request:', err);
       alert('Failed to cancel request: ' + err.message);
+    }
+  };
+
+  const handleDeleteFeedback = async (feedbackId) => {
+    if (!window.confirm('Are you sure you want to delete this feedback?')) return;
+    try {
+      await apiCall(`/volunteers/feedback/${feedbackId}?volunteerId=${user.userId}`, { method: 'DELETE' });
+      alert('Feedback deleted successfully');
+      fetchEvents();
+    } catch (err) {
+      console.error('Failed to delete feedback:', err);
+      alert('Failed to delete feedback: ' + err.message);
     }
   };
 
@@ -321,6 +341,7 @@ export default function VolunteerMyEvents() {
                         </Link>
                       )}
                     </div>
+
                   </div>
                 </div>
               );
@@ -328,6 +349,18 @@ export default function VolunteerMyEvents() {
           </div>
         )}
       </div>
+
+      {/* Modals */}
+      <FeedbackModal
+        isOpen={isFeedbackModalOpen}
+        onClose={() => {
+           setIsFeedbackModalOpen(false);
+           setEditingFeedback(null);
+        }}
+        event={selectedEvent}
+        initialData={editingFeedback}
+        onSuccess={fetchEvents}
+      />
     </div>
   );
 }

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useApi } from '../../../useApi';
 import { 
-  Users, Mail, Phone, Search, Loader2, MailPlus, Trash2, Plus, X, Save, Edit2 
+  Users, Mail, Phone, Search, Loader2, MailPlus, Trash2, Plus, X, Save, Edit2, Eye 
 } from 'lucide-react';
 
 export default function AdminVolunteers() {
@@ -187,13 +187,26 @@ export default function AdminVolunteers() {
                       </td>
 
                       <td className="px-6 py-4">
-                         <span className="px-2 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-green-100 text-green-700">
-                           Active
-                         </span>
+                         {v.documentsVerified ? (
+                           <span className="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-[10px] font-black uppercase tracking-widest border border-emerald-200">
+                             Verified
+                           </span>
+                         ) : (
+                           <span className="px-3 py-1 bg-amber-100 text-amber-700 rounded-full text-[10px] font-black uppercase tracking-widest border border-amber-200">
+                             Unverified
+                           </span>
+                         )}
                       </td>
 
                       <td className="px-6 py-4 text-right">
                         <div className="flex items-center justify-end gap-2">
+                          <button 
+                            onClick={() => window.location.href = `/admin/volunteers/${v.id}`}
+                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+                            title="View Profile"
+                          >
+                            <Eye size={18} />
+                          </button>
                           <button 
                             onClick={() => handleOpenModal(v)}
                             className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"

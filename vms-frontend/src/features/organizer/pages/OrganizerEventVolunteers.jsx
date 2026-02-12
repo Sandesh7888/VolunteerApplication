@@ -86,6 +86,22 @@ export default function OrganizerEventVolunteers() {
     }
   };
 
+  const issueCertificate = async (registrationId) => {
+    const certUrl = window.prompt("Enter Certificate URL (e.g., a PDF link):", `https://vms.com/certificates/${registrationId}`);
+    if (!certUrl) return;
+
+    try {
+      await apiCall(`/volunteers/${registrationId}/certificate?organizerId=${authUser?.userId}&certificateUrl=${encodeURIComponent(certUrl)}`, { 
+        method: "POST" 
+      });
+      alert("Certificate issued successfully!");
+      await fetchVolunteers();
+    } catch (err) {
+      console.error(err);
+      alert("Failed to issue certificate: " + err.message);
+    }
+  };
+
   const handleViewProfile = (volunteer) => {
     setSelectedVolunteer(volunteer);
     setShowModal(true);
@@ -175,15 +191,21 @@ export default function OrganizerEventVolunteers() {
                       <td className="px-8 py-6">
                         <span className={`px-3 py-1 rounded-full text-xs font-bold ${
                           v.status === 'PENDING' ? 'bg-orange-100 text-orange-800' :
-                          v.status === 'APPROVED' ? 'bg-green-100 text-green-800' :
+                          v.status === 'ATTENDED' ? 'bg-indigo-100 text-indigo-700' :
                           v.status === 'REJECTED' ? 'bg-red-100 text-red-800' :
                           'bg-gray-100 text-gray-800'
                         }`}>
                           {v.status}
                         </span>
+                        {v.feedback && (
+                          <div className="mt-1 flex items-center gap-1 text-[10px] text-amber-600 font-bold uppercase">
+                            <Star size={10} className="fill-amber-400 text-amber-400" />
+                            Has Feedback ({v.rating}/5)
+                          </div>
+                        )}
                       </td>
-                      <td className="px-8 py-6">
-                        <div className="flex gap-2">
+                      <td className="px-8 py-6 text-right">
+                        <div className="flex gap-2 justify-end">
                           <button
                             onClick={() => handleViewProfile(v)}
                             className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all"
@@ -198,11 +220,7 @@ export default function OrganizerEventVolunteers() {
                                 disabled={approving[v.id]}
                                 className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-xl font-medium flex items-center space-x-1 shadow-md hover:shadow-lg transition-all duration-200 disabled:opacity-50"
                               >
-                                {approving[v.id] ? (
-                                  <Loader2 className="w-4 h-4 animate-spin" />
-                                ) : (
-                                  <CheckCircle size={16} />
-                                )}
+                                {approving[v.id] ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle size={16} />}
                                 <span className="hidden sm:inline">Approve</span>
                               </button>
                               <button
@@ -210,11 +228,7 @@ export default function OrganizerEventVolunteers() {
                                 disabled={approving[v.id]}
                                 className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-xl font-medium flex items-center space-x-1 shadow-md hover:shadow-lg transition-all duration-200 disabled:opacity-50"
                               >
-                                {approving[v.id] ? (
-                                  <Loader2 className="w-4 h-4 animate-spin" />
-                                ) : (
-                                  <XCircle size={16} />
-                                )}
+                                {approving[v.id] ? <Loader2 className="w-4 h-4 animate-spin" /> : <XCircle size={16} />}
                                 <span className="hidden sm:inline">Reject</span>
                               </button>
                             </>
@@ -227,6 +241,20 @@ export default function OrganizerEventVolunteers() {
                               <XCircle size={16} />
                               <span className="hidden sm:inline">Remove</span>
                             </button>
+                          )}
+                          {v.status === 'ATTENDED' && (
+                             <button
+                               onClick={() => issueCertificate(v.id)}
+                               className={`px-4 py-2 rounded-xl font-medium flex items-center space-x-1 shadow-md hover:shadow-lg transition-all duration-200 ${
+                                 v.certificateUrl 
+                                   ? 'bg-emerald-100 text-emerald-700 border border-emerald-200 cursor-default' 
+                                   : 'bg-indigo-600 hover:bg-indigo-700 text-white'
+                               }`}
+                               disabled={!!v.certificateUrl}
+                             >
+                               <Award size={16} />
+                               <span className="hidden sm:inline">{v.certificateUrl ? 'Issued' : 'Give Certificate'}</span>
+                             </button>
                           )}
                         </div>
                       </td>
@@ -287,6 +315,15 @@ export default function OrganizerEventVolunteers() {
                    ))}
                 </div>
               </div>
+
+              {selectedVolunteer.feedback && (
+                <div className="bg-amber-50 p-6 rounded-2xl border border-amber-100 text-left mb-8">
+                  <h4 className="flex items-center gap-2 text-amber-800 font-bold mb-3 italic">
+                    <Star size={18} className="fill-amber-400 text-amber-400" /> Volunteer's Feedback ({selectedVolunteer.rating}/5)
+                  </h4>
+                  <p className="text-amber-900 font-medium italic">"{selectedVolunteer.feedback}"</p>
+                </div>
+              )}
 
               <div className="flex gap-4">
                 {selectedVolunteer.status === 'PENDING' ? (

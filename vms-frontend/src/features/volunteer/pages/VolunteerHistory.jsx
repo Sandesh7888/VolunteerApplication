@@ -1,14 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { useApi } from '../../../useApi';
 import { useAuth } from '../../../features/auth/hooks/useAuth';
-import { Calendar, MapPin, Clock, Award, Search, ChevronRight, Loader2 } from 'lucide-react';
+import { Calendar, MapPin, Clock, Award, Search, ChevronRight, Loader2, FileText } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import CertificateModal from '../components/CertificateModal';
 
 const VolunteerHistory = () => {
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
   const { apiCall } = useApi();
+  const [selectedEventForCert, setSelectedEventForCert] = useState(null);
+  const [isCertModalOpen, setIsCertModalOpen] = useState(false);
 
   useEffect(() => {
     const fetchHistory = async () => {
@@ -132,12 +135,26 @@ const VolunteerHistory = () => {
                       </div>
                     </td>
                     <td className="px-10 py-8 text-right">
-                      <Link 
-                        to={`/volunteer/events/${item.event.id}`}
-                        className="inline-flex items-center justify-center p-3 hover:bg-blue-600 rounded-2xl text-gray-400 hover:text-white transition-all duration-300 border border-gray-100 hover:border-blue-600 hover:shadow-lg hover:shadow-blue-200 group-hover:translate-x-1"
-                      >
-                        <ChevronRight size={24} />
-                      </Link>
+                      <div className="flex items-center justify-end gap-2">
+                        {item.status === 'ATTENDED' && (
+                          <button
+                            onClick={() => {
+                              setSelectedEventForCert(item.event);
+                              setIsCertModalOpen(true);
+                            }}
+                            className="inline-flex items-center justify-center p-3 hover:bg-emerald-600 rounded-2xl text-emerald-600 hover:text-white transition-all duration-300 border border-emerald-100 hover:border-emerald-600 hover:shadow-lg hover:shadow-emerald-200"
+                            title="View Certificate"
+                          >
+                            <FileText size={20} />
+                          </button>
+                        )}
+                        <Link 
+                          to={`/volunteer/events/${item.event.id}`}
+                          className="inline-flex items-center justify-center p-3 hover:bg-blue-600 rounded-2xl text-gray-400 hover:text-white transition-all duration-300 border border-gray-100 hover:border-blue-600 hover:shadow-lg hover:shadow-blue-200 group-hover:translate-x-1"
+                        >
+                          <ChevronRight size={24} />
+                        </Link>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -159,6 +176,13 @@ const VolunteerHistory = () => {
           )}
         </div>
       </div>
+
+      <CertificateModal 
+        isOpen={isCertModalOpen}
+        onClose={() => setIsCertModalOpen(false)}
+        volunteerName={user?.name}
+        event={selectedEventForCert}
+      />
     </div>
   );
 };

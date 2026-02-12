@@ -28,4 +28,8 @@ public interface EventService {
     List<EventVolunteer> getEventVolunteers(Long eventId);
 
     Event getEventById(Long eventId);
+
+    Event approveEvent(Long id);
+
+    Event rejectEvent(Long id);
 }

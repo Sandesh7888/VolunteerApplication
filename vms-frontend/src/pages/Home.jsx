@@ -51,13 +51,15 @@ function Home() {
     <div className={`min-h-screen bg-slate-50 transition-colors duration-300`}>
       <div className="relative">
         {/* Pass theme state to Nav */}
+
         <Nav darkMode={darkMode} toggleTheme={toggleTheme} scrolled={scrolled} />
         
         <div className="relative">
           <Hero />
+          
           <div className="pb-0 bg-white">
             <Categories />
-            <HowItWorks />
+            <HowItWorks /> 
             <Partners />
             <Testimonials />
             <Footer />

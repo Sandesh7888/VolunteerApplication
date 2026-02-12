@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useApi } from "../../../useApi";
 import { useAuth } from "../../../features/auth/hooks/useAuth";
+import { ShieldAlert, X, Zap, Loader2 } from "lucide-react";
 
 export default function CreateEvent() {
   const { user } = useAuth();
@@ -31,6 +32,11 @@ export default function CreateEvent() {
   const [error, setError] = useState("");
   const navigate = useNavigate();
   const { apiCall } = useApi();
+  const { refreshUser } = useAuth();
+
+  useEffect(() => {
+     refreshUser();
+  }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -160,8 +166,28 @@ export default function CreateEvent() {
             </p>
           </div>
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-6 py-4 rounded-xl mb-6">
+            <div className="bg-red-50 border border-red-200 text-red-700 px-6 py-4 rounded-xl mb-6 flex items-center gap-3">
+              <div className="p-1.5 bg-red-100 rounded-lg">
+                <X className="w-4 h-4" />
+              </div>
               {error}
+            </div>
+          )}
+          {!user?.documentsVerified && (
+            <div className="bg-amber-50 border-2 border-amber-200 text-amber-900 px-6 py-6 rounded-2xl mb-8 flex flex-col md:flex-row items-center gap-6 shadow-sm shadow-amber-100">
+              <div className="w-16 h-16 bg-amber-400 text-white rounded-2xl flex items-center justify-center shadow-lg transform rotate-3">
+                <ShieldAlert className="w-8 h-8" />
+              </div>
+              <div className="flex-1 text-center md:text-left">
+                <h3 className="text-lg font-black tracking-tight mb-1">Organization Verification Required</h3>
+                <p className="text-sm font-medium text-amber-800 leading-relaxed">
+                  To maintain the quality of our ecosystem, organizers must verify their identity before hosting events. 
+                  Please visit your **Profile** to upload the required documents.
+                </p>
+              </div>
+              <Link to="/organizer/profile" className="px-6 py-3 bg-amber-900 text-white rounded-xl font-black text-sm uppercase tracking-widest hover:bg-black transition-all shadow-md">
+                Verify Now
+              </Link>
             </div>
           )}
           <form
@@ -432,10 +458,29 @@ export default function CreateEvent() {
             </div>
             <button
               type="submit"
-              disabled={loading}
-              className="md:col-span-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold py-4 px-8 rounded-xl text-lg shadow-xl hover:shadow-2xl transform hover:-translate-y-1 transition-all duration-200 disabled:opacity-50 w-full"
+              disabled={loading || !user?.documentsVerified}
+              className={`md:col-span-2 py-5 px-8 rounded-2xl text-lg font-black shadow-xl transition-all duration-300 transform w-full flex items-center justify-center gap-3 ${
+                loading || !user?.documentsVerified
+                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed border-2 border-gray-200'
+                  : 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white hover:shadow-2xl hover:-translate-y-1 active:translate-y-0'
+              }`}
             >
-              {loading ? "Creating Event..." : "Create Event"}
+              {loading ? (
+                <>
+                  <Loader2 className="animate-spin w-6 h-6" />
+                  Processing...
+                </>
+              ) : !user?.documentsVerified ? (
+                <>
+                  <ShieldAlert className="w-6 h-6" />
+                  Verification Required
+                </>
+              ) : (
+                <>
+                  <Zap className="w-6 h-6 fill-white" />
+                  Launch Event
+                </>
+              )}
             </button>
           </form>
         </div>

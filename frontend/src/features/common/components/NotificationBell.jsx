@@ -33,10 +33,8 @@ export default function NotificationBell() {
     const fetchNotifications = async () => {
         try {
             const data = await apiCall(`/notifications/${user.userId}`);
-            // Filter only "Event End" related notifications
-            const filtered = data.filter(n => n.title === 'Event Completed' || n.title === 'Event Concluded');
-            setNotifications(filtered);
-            setUnreadCount(filtered.filter(n => !n.read).length);
+            setNotifications(data);
+            setUnreadCount(data.filter(n => !n.read).length);
         } catch (err) {
             console.error("Failed to fetch notifications", err);
         }

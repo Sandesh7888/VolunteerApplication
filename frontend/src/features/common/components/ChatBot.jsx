@@ -26,26 +26,24 @@ export default function ChatBot() {
 
   // Reset or load chat history when user changes
   useEffect(() => {
-    if (user?.id) {
-        const saved = localStorage.getItem(`chat_history_${user.id}`);
-        if (saved) {
-            setMessages(JSON.parse(saved));
-        } else {
-            setMessages([
-                { type: 'bot', text: 'Hi! How can I help you today?' }
-            ]);
-        }
+    const historyKey = user?.userId ? `chat_history_${user.userId}` : 'chat_history_guest';
+    const saved = localStorage.getItem(historyKey);
+    if (saved) {
+      setMessages(JSON.parse(saved));
     } else {
-        setMessages([]);
+      setMessages([
+        { type: 'bot', text: 'Hello! I am your AI assistant. Ask me anything about events or volunteering!' }
+      ]);
     }
-  }, [user?.id]);
+  }, [user?.userId]);
 
   // Save messages to local storage whenever they change
   useEffect(() => {
-    if (user?.id && messages.length > 0) {
-        localStorage.setItem(`chat_history_${user.id}`, JSON.stringify(messages));
+    const historyKey = user?.userId ? `chat_history_${user.userId}` : 'chat_history_guest';
+    if (messages.length > 0) {
+      localStorage.setItem(historyKey, JSON.stringify(messages));
     }
-  }, [messages, user?.id]);
+  }, [messages, user?.userId]);
 
   const handleSend = async (e) => {
     e.preventDefault();
@@ -74,16 +72,14 @@ export default function ChatBot() {
 
   const handleClear = () => {
     if (window.confirm("Are you sure you want to clear the chat history?")) {
-        setMessages([
-            { type: 'bot', text: 'Hi! How can I help you today?' }
-        ]);
-        if (user?.id) {
-            localStorage.removeItem(`chat_history_${user.id}`);
-        }
+      const initialMsg = [{ type: 'bot', text: 'Hello! I am your AI assistant. Ask me anything about events or volunteering!' }];
+      setMessages(initialMsg);
+      const historyKey = user?.userId ? `chat_history_${user.userId}` : 'chat_history_guest';
+      localStorage.removeItem(historyKey);
     }
   };
 
-  if (!user) return null;
+  // Component remains visible for both guests and logged-in users
 
   return (
     <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end pointer-events-none">

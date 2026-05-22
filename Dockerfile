@@ -1,19 +1,23 @@
-FROM eclipse-temurin:21-jdk
-
+# Stage 1: Build the application
+FROM maven:3.9-eclipse-temurin-21 AS build
 WORKDIR /app
 
 COPY . .
 
-RUN if [ -f backend/mvnw ]; then \
-        chmod +x backend/mvnw && \
+RUN if [ -f backend/pom.xml ]; then \
         cd backend && \
-        ./mvnw clean package -DskipTests && \
+        mvn clean package -DskipTests && \
         cp target/vms-backend-*.jar /app/app.jar; \
     else \
-        chmod +x mvnw && \
-        ./mvnw clean package -DskipTests && \
+        mvn clean package -DskipTests && \
         cp target/vms-backend-*.jar /app/app.jar; \
     fi
+
+# Stage 2: Run the application
+FROM eclipse-temurin:21-jre
+WORKDIR /app
+
+COPY --from=build /app/app.jar /app/app.jar
 
 EXPOSE 8080
 

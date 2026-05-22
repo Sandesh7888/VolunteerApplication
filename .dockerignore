@@ -1,0 +1,9 @@
+.git
+.github
+.vscode
+frontend/node_modules
+frontend/dist
+backend/target
+backend/build_log.txt
+backend/.idea
+backend/.settings

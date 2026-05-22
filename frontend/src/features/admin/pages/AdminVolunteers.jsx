@@ -105,6 +105,8 @@ export default function AdminVolunteers() {
     }
   };
 
+  const isVerifiedUser = (user) => Boolean(user?.documentsVerified || user?.verified || user?.verificationStatus === 'VERIFIED');
+
   const filteredVolunteers = volunteers.filter(v => 
     v.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     v.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -187,7 +189,7 @@ export default function AdminVolunteers() {
                       </td>
 
                       <td className="px-6 py-4">
-                         {v.documentsVerified ? (
+                         {isVerifiedUser(v) ? (
                            <span className="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-[10px] font-black uppercase tracking-widest border border-emerald-200">
                              Verified
                            </span>
@@ -315,3 +317,4 @@ export default function AdminVolunteers() {
     </div>
   );
 }
+

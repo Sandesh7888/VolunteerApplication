@@ -5,7 +5,7 @@ import { useAuth } from '../../auth/hooks/useAuth';
 import { 
   Calendar, MapPin, Users, Tag, CheckCircle, Clock, 
   ArrowLeft, Edit3, Trash2, Eye, User, CheckCircle2, XCircle, Loader2,
-  Info, BarChart3, Users2, XOctagon, Send, Award, Star
+  Info, BarChart3, Users2, XOctagon, Send, Award, Star, Phone
 } from 'lucide-react';
 import { getEventStatus } from '../../../utils/formatters';
 
@@ -491,6 +491,15 @@ export default function OrganizerEventDetails() {
                           <div>
                             <p className="font-black text-gray-900">{v.volunteer?.name || 'Unknown'}</p>
                             <p className="text-xs text-gray-400 font-bold uppercase tracking-wider mt-0.5">{v.volunteer?.email}</p>
+                            <div className="mt-1 flex items-center gap-3">
+                              <span className="text-[10px] font-black text-gray-400 uppercase tracking-wider flex items-center gap-1">
+                                <Phone size={10} />
+                                {v.volunteer?.number || 'No phone'}
+                              </span>
+                              <span className="text-[10px] font-black text-gray-300 uppercase tracking-wider">
+                                ID: #{v.volunteer?.id || v.id}
+                              </span>
+                            </div>
                           </div>
                         </div>
                       </td>
@@ -498,7 +507,9 @@ export default function OrganizerEventDetails() {
                         <p className="text-sm font-bold text-gray-500">
                           {new Date(v.joinedAt).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' })}
                         </p>
-                        <p className="text-[10px] font-black text-gray-300 uppercase mt-0.5">Application Date</p>
+                        <p className="text-[10px] font-black text-gray-300 uppercase mt-0.5">
+                          {new Date(v.joinedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })} Application Time
+                        </p>
                       </td>
                       <td className="px-10 py-6">
                         <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest ${
@@ -515,6 +526,16 @@ export default function OrganizerEventDetails() {
                             {v.feedbacks.length} Feedback(s)
                           </div>
                         )}
+                        <div className="mt-1 flex items-center gap-2 flex-wrap">
+                          <span className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-widest ${
+                            (v.volunteer?.documentsVerified || v.volunteer?.verified) ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'
+                          }`}>
+                            {(v.volunteer?.documentsVerified || v.volunteer?.verified) ? 'Docs Verified' : 'Docs Pending'}
+                          </span>
+                          <span className="text-[10px] font-black text-indigo-500 uppercase tracking-widest">
+                            Present: {v.attendanceRecords?.filter(r => r.status === 'PRESENT').length || 0}
+                          </span>
+                        </div>
                       </td>
                       <td className="px-10 py-6 text-right">
                         <div className="flex items-center justify-end gap-2 text-right">

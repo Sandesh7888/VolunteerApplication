@@ -9,6 +9,8 @@ import { getEventStatus } from "../../../utils/formatters";
 
 export default function OrganizerAttendance() {
   const [events, setEvents] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [eventFilter, setEventFilter] = useState("ALL");
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [selectedDate, setSelectedDate] = useState("");
   const [volunteers, setVolunteers] = useState([]);
@@ -147,17 +149,57 @@ export default function OrganizerAttendance() {
     );
   }
 
+  const filteredEvents = events.filter((event) => {
+    const status = getEventStatus(event.startDate, event.endDate, event.startTime, event.endTime);
+    const matchesFilter = eventFilter === "ALL" || status === eventFilter;
+    const query = searchTerm.trim().toLowerCase();
+    const matchesSearch =
+      query.length === 0 ||
+      event.title?.toLowerCase().includes(query) ||
+      event.locationName?.toLowerCase().includes(query);
+
+    return matchesFilter && matchesSearch;
+  });
+
   return (
     <div className="p-4 sm:p-8 bg-gradient-to-br from-purple-50 via-white to-indigo-50 min-h-screen pt-20">
       <div className="max-w-7xl mx-auto">
         
         {!selectedEvent ? (
           <>
-            <div className="mb-10 text-center lg:text-left">
-              <h1 className="text-4xl lg:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-indigo-600 mb-4">
-                Attendance Console
-              </h1>
-              <p className="text-xl text-gray-600 font-medium">Manage real-time volunteer presence</p>
+            <div className="mb-10">
+              <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
+                <div className="text-center lg:text-left">
+                  <h1 className="text-4xl lg:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-indigo-600 mb-4">
+                    Attendance Console
+                  </h1>
+                  <p className="text-xl text-gray-600 font-medium">Manage real-time volunteer presence</p>
+                </div>
+
+                <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
+                  <div className="relative min-w-[260px]">
+                    <Search className="w-4 h-4 text-gray-400 absolute left-4 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      placeholder="Search events..."
+                      className="w-full pl-11 pr-4 py-3 rounded-xl border border-purple-100 bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-200"
+                    />
+                  </div>
+
+                  <select
+                    value={eventFilter}
+                    onChange={(e) => setEventFilter(e.target.value)}
+                    className="px-4 py-3 rounded-xl border border-purple-100 bg-white text-gray-700 font-semibold focus:outline-none focus:ring-2 focus:ring-purple-200"
+                  >
+                    <option value="ALL">All</option>
+                    <option value="LIVE">Live</option>
+                    <option value="UPCOMING">Upcoming</option>
+                    <option value="COMPLETED">Completed</option>
+                  </select>
+                </div>
+              </div>
             </div>
 
             {events.length === 0 ? (
@@ -166,9 +208,15 @@ export default function OrganizerAttendance() {
                 <h3 className="text-2xl font-bold text-gray-400">No active events yet</h3>
                 <p className="text-gray-500 mt-2 font-medium">Publish an event to start tracking attendance</p>
               </div>
+            ) : filteredEvents.length === 0 ? (
+              <div className="bg-white rounded-3xl p-16 text-center border border-purple-100 shadow-sm">
+                <Search className="w-16 h-16 text-purple-100 mx-auto mb-6" />
+                <h3 className="text-2xl font-bold text-gray-500">No matching events</h3>
+                <p className="text-gray-500 mt-2 font-medium">Try a different search or filter</p>
+              </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {events.map(event => {
+                {filteredEvents.map(event => {
                   const status = getEventStatus(event.startDate, event.endDate, event.startTime, event.endTime);
                   const isLive = status === 'LIVE';
                   

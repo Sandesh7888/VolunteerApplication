@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useApi } from "../../../useApi";
-import { CheckCircle, XCircle, Loader2, Calendar, MapPin, Eye, Clock } from "lucide-react";
+import { CheckCircle, XCircle, Loader2, Calendar, MapPin, Eye, Clock, Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 export default function AdminEventsApproval() {
@@ -8,6 +8,7 @@ export default function AdminEventsApproval() {
   const navigate = useNavigate();
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     fetchPendingEvents();
@@ -48,6 +49,24 @@ export default function AdminEventsApproval() {
     }
   };
 
+  const normalizedSearch = searchQuery.trim().toLowerCase();
+  const filteredEvents = events.filter((event) => {
+    if (!normalizedSearch) return true;
+
+    const searchableContent = [
+      event.title,
+      event.category,
+      event.city,
+      event.locationName,
+      event.organizer?.name,
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
+
+    return searchableContent.includes(normalizedSearch);
+  });
+
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px]">
@@ -59,9 +78,21 @@ export default function AdminEventsApproval() {
 
   return (
     <div className="max-w-7xl mx-auto p-6">
-      <div className="mb-8">
-        <h1 className="text-4xl font-bold text-gray-900 mb-2">Event Approval</h1>
-        <p className="text-gray-600 font-medium">Review and manage pending event submissions ({events.length})</p>
+      <div className="mb-8 flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+        <div>
+          <h1 className="text-4xl font-bold text-gray-900 mb-2">Event Approval</h1>
+          <p className="text-gray-600 font-medium">Review and manage pending event submissions ({events.length})</p>
+        </div>
+        <div className="relative w-full lg:w-[420px] lg:flex-shrink-0">
+          <Search className="w-4 h-4 text-gray-400 absolute left-4 top-1/2 -translate-y-1/2" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search by title, category, organizer, location..."
+            className="w-full pl-11 pr-4 py-3 rounded-xl border border-indigo-100 bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-300"
+          />
+        </div>
       </div>
 
       {events.length === 0 ? (
@@ -72,9 +103,17 @@ export default function AdminEventsApproval() {
           <h3 className="text-xl font-bold text-gray-900 mb-2">All Caught Up!</h3>
           <p className="text-gray-500">There are no pending events waiting for approval.</p>
         </div>
+      ) : filteredEvents.length === 0 ? (
+        <div className="bg-white rounded-2xl shadow-sm border border-indigo-100 p-12 text-center">
+          <div className="bg-indigo-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Search className="w-10 h-10 text-indigo-500" />
+          </div>
+          <h3 className="text-xl font-bold text-gray-900 mb-2">No Matching Events</h3>
+          <p className="text-gray-500">No pending events match your search.</p>
+        </div>
       ) : (
         <div className="grid gap-6">
-          {events.map((e) => (
+          {filteredEvents.map((e) => (
             <div key={e.id} className="bg-white rounded-2xl shadow-sm border border-indigo-50 border-l-4 border-l-amber-400 p-6 hover:shadow-md transition-all">
               <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
                 <div className="flex-1">

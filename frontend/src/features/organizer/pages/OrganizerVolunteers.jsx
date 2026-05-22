@@ -9,9 +9,11 @@ import {
   Search,
   Filter,
   Mail,
+  Eye,
+  Phone,
   Calendar,
   Clock,
-  MoreVertical
+  X
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -25,6 +27,7 @@ export default function OrganizerVolunteers() {
   const [volunteers, setVolunteers] = useState([]);
   const [actionLoading, setActionLoading] = useState({});
   const [filterStatus, setFilterStatus] = useState('ALL');
+  const [previewVolunteer, setPreviewVolunteer] = useState(null);
 
   useEffect(() => {
     fetchEvents();
@@ -123,7 +126,7 @@ export default function OrganizerVolunteers() {
           {/* LEFT: Event List */}
           <div className="lg:col-span-1 space-y-4">
             <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest px-2">Select Event</h3>
-            <div className="space-y-3">
+            <div className="space-y-3 max-h-[70vh] overflow-y-auto pr-1">
               {events.map(event => (
                 <button
                   key={event.id}
@@ -215,6 +218,14 @@ export default function OrganizerVolunteers() {
 
                         {/* Actions */}
                         <div className="flex items-center gap-2 pt-4 border-t border-slate-200/50">
+                          <button
+                            onClick={() => setPreviewVolunteer(volunteer)}
+                            className="px-3 py-2 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 rounded-xl transition-colors"
+                            title="View Volunteer"
+                          >
+                            <Eye size={18} />
+                          </button>
+
                           {volunteer.status === 'PENDING' && (
                             <>
                               <button 
@@ -261,6 +272,57 @@ export default function OrganizerVolunteers() {
           </div>
         </div>
       </div>
+
+      {previewVolunteer && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+            onClick={() => setPreviewVolunteer(null)}
+          />
+
+          <div className="relative w-full max-w-xl bg-white rounded-3xl shadow-2xl border border-slate-200 p-6 sm:p-8">
+            <div className="flex items-start justify-between mb-6">
+              <div>
+                <p className="text-xs font-black text-indigo-500 uppercase tracking-widest mb-2">Volunteer Profile</p>
+                <h3 className="text-2xl font-black text-slate-900">
+                  {previewVolunteer.volunteer?.name || 'Volunteer'}
+                </h3>
+              </div>
+              <button
+                onClick={() => setPreviewVolunteer(null)}
+                className="p-2 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div className="flex items-center gap-3 p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                <Mail className="w-4 h-4 text-indigo-500" />
+                <span className="text-sm font-semibold text-slate-700">{previewVolunteer.volunteer?.email || 'N/A'}</span>
+              </div>
+
+              <div className="flex items-center gap-3 p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                <Phone className="w-4 h-4 text-indigo-500" />
+                <span className="text-sm font-semibold text-slate-700">{previewVolunteer.volunteer?.number || 'N/A'}</span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-4 rounded-2xl bg-indigo-50 border border-indigo-100">
+                  <p className="text-[10px] font-black text-indigo-500 uppercase tracking-widest mb-1">Volunteer ID</p>
+                  <p className="text-sm font-bold text-slate-900">
+                    #{previewVolunteer.volunteer?.id || previewVolunteer.id}
+                  </p>
+                </div>
+                <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-100">
+                  <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest mb-1">Status</p>
+                  <p className="text-sm font-bold text-slate-900">{previewVolunteer.status}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

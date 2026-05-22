@@ -40,10 +40,20 @@ export default function DashboardLayout() {
     { name: 'Settings', href: '/admin/settings', iconPath: "M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37z", color: "text-gray-500" },
   ];
 
-  const isActive = (href) =>
-    location.pathname === href ||
-    (href === '/admin/events' && location.pathname.includes('/admin/events')) ||
-    (href === '/admin/events-approval' && location.pathname.includes('events-approval'));
+  const isActive = (href) => {
+    if (href === '/admin/events') {
+      return (
+        location.pathname.startsWith('/admin/events') &&
+        !location.pathname.startsWith('/admin/events-approval')
+      );
+    }
+
+    if (href === '/admin/events-approval') {
+      return location.pathname.startsWith('/admin/events-approval');
+    }
+
+    return location.pathname === href;
+  };
 
   return (
     <div className="h-screen w-screen bg-gradient-to-br from-gray-50 to-indigo-50 overflow-hidden flex flex-col">
@@ -86,10 +96,10 @@ export default function DashboardLayout() {
 
       {/* BODY */}
       <div className="flex flex-1 relative overflow-hidden">
-        {/* OVERLAY (mobile only) */}
+        {/* OVERLAY */}
         {isSidebarOpen && (
           <div
-            className="fixed inset-0 bg-black/50 z-[60] lg:hidden"
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60]"
             onClick={() => setIsSidebarOpen(false)}
           />
         )}

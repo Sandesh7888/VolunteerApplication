@@ -108,6 +108,8 @@ export default function AdminOrganizers() {
     }
   };
 
+  const isVerifiedUser = (user) => Boolean(user?.documentsVerified || user?.verified || user?.verificationStatus === 'VERIFIED');
+
   const filteredOrganizers = organizers.filter(org => 
     org.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     org.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -192,7 +194,7 @@ export default function AdminOrganizers() {
                       </td>
 
                       <td className="px-6 py-4">
-                         {o.documentsVerified ? (
+                         {isVerifiedUser(o) ? (
                            <span className="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-[10px] font-black uppercase tracking-widest border border-emerald-200">
                              Verified
                            </span>
@@ -318,3 +320,4 @@ export default function AdminOrganizers() {
     </div>
   );
 }
+

@@ -3,7 +3,7 @@ import { useApi } from "../../../useApi";
 import { useAuth } from "../../auth/hooks/useAuth";
 import { 
   CheckCircle, XCircle, Loader2, User, Calendar, MapPin, 
-  Users, Eye, Mail, Award, Clock, Star, X, Upload, ExternalLink 
+  Users, Eye, Mail, Award, Clock, Star, X, Upload, ExternalLink, Phone
 } from "lucide-react";
 
 export default function VolunteerListModal({ isOpen, onClose, eventId }) {
@@ -15,6 +15,7 @@ export default function VolunteerListModal({ isOpen, onClose, eventId }) {
   const [approving, setApproving] = useState({});
   const [selectedVolunteer, setSelectedVolunteer] = useState(null);
   const [uploading, setUploading] = useState({});
+  const [showProfileModal, setShowProfileModal] = useState(false);
 
   useEffect(() => {
     if (isOpen && eventId) {
@@ -108,6 +109,11 @@ export default function VolunteerListModal({ isOpen, onClose, eventId }) {
     }
   };
 
+  const handleViewProfile = (volunteer) => {
+    setSelectedVolunteer(volunteer);
+    setShowProfileModal(true);
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -168,6 +174,13 @@ export default function VolunteerListModal({ isOpen, onClose, eventId }) {
                         {v.status}
                       </span>
                     </div>
+                    <div className="mt-1 flex items-center gap-4 text-[11px] font-bold text-slate-400">
+                      <span className="flex items-center gap-1">
+                        <Phone size={12} className="text-indigo-400" />
+                        {v.volunteer?.number || 'No phone'}
+                      </span>
+                      <span>ID: #{v.volunteer?.id || v.id}</span>
+                    </div>
                   </div>
 
                   {/* Rating / Feedback Preview */}
@@ -180,6 +193,14 @@ export default function VolunteerListModal({ isOpen, onClose, eventId }) {
 
                   {/* Actions */}
                   <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleViewProfile(v)}
+                      className="p-3 text-indigo-600 hover:bg-indigo-50 rounded-2xl transition-all"
+                      title="View Profile"
+                    >
+                      <Eye size={20} />
+                    </button>
+
                     {v.status === 'PENDING' && (
                       <>
                         <button
@@ -245,6 +266,75 @@ export default function VolunteerListModal({ isOpen, onClose, eventId }) {
           )}
         </div>
       </div>
+
+      {showProfileModal && selectedVolunteer && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="relative h-20 ">
+              <button
+                onClick={() => setShowProfileModal(false)}
+                className="absolute top-4 right-4 p-2 hover:bg-red-500 bg-black/30 rounded-full text-white transition-all"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="px-8 pb-8 -mt-10 text-center">
+              <div className="inline-block p-1 bg-white rounded-full shadow-xl mb-4">
+                <div className="w-20 h-20 bg-gradient-to-br from-purple-400 to-indigo-400 rounded-full flex items-center justify-center text-white">
+                  <User size={40} />
+                </div>
+              </div>
+
+              <h3 className="text-2xl font-bold text-gray-900 mb-1">{selectedVolunteer.volunteer?.name || 'Volunteer'}</h3>
+              <p className="text-purple-600 font-bold text-xs uppercase tracking-widest mb-6">Volunteer Profile</p>
+
+              <div className="grid grid-cols-2 gap-4 mb-6">
+                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                  <Mail className="w-5 h-5 text-indigo-500 mx-auto mb-2" />
+                  <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mb-1">Email</p>
+                  <p className="text-sm font-bold text-slate-700 truncate">{selectedVolunteer.volunteer?.email || 'N/A'}</p>
+                </div>
+                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                  <Clock className="w-5 h-5 text-emerald-500 mx-auto mb-2" />
+                  <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mb-1">Joined</p>
+                  <p className="text-sm font-bold text-slate-700">
+                    {selectedVolunteer.joinedAt ? new Date(selectedVolunteer.joinedAt).toLocaleDateString('en-IN') : 'N/A'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 mb-6">
+                
+               
+              </div>
+
+              <div className="bg-indigo-50 p-4 rounded-2xl border border-indigo-100 mb-4">
+                <p className="text-xs font-black text-indigo-500 uppercase tracking-widest mb-1">Current Status</p>
+                <p className="text-sm font-bold text-slate-900">{selectedVolunteer.status}</p>
+              </div>
+
+              <div className="bg-emerald-50 p-4 rounded-2xl border border-emerald-100 mb-6">
+                <p className="text-xs font-black text-emerald-500 uppercase tracking-widest mb-2">Skills</p>
+                <div className="flex flex-wrap gap-2">
+                  {(selectedVolunteer.volunteer?.skills && selectedVolunteer.volunteer.skills.length > 0
+                    ? selectedVolunteer.volunteer.skills
+                    : ['Communication', 'Teamwork', 'Punctuality']
+                  ).map((skill) => (
+                    <span
+                      key={skill}
+                      className="px-3 py-1 bg-white border border-emerald-200 rounded-lg text-xs font-bold text-emerald-700 shadow-sm"
+                    >
+                      {skill}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

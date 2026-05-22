@@ -7,5 +7,6 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 public class VolunteerApplication {
 	public static void main(String[] args) {
 		SpringApplication.run(VolunteerApplication.class, args);
+		System.out.println("Application run successfully :) ");
 	}
 }

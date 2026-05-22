@@ -25,8 +25,9 @@ public class EmailServiceImpl implements EmailService {
                         helper.setText(content, true);
                         mailSender.send(message);
                 } catch (Exception e) {
-                        // Log error but don't crash - allows dev mode without SMTP
-                        System.err.println("⚠️ EMAIL SEND FAILED (Ignored for Dev): " + e.getMessage());
+                        // Log error with full stack trace for better debugging
+                        System.err.println("❌ EMAIL SEND FAILED: " + e.getMessage());
+                        e.printStackTrace();
                         System.out.println("⚠️ IF YOU ARE IN DEV MODE, CHECK CONSOLE FOR OTP/LINKS ⚠️");
                 }
         }

@@ -1,4 +1,6 @@
 import { Users, Star, Quote, Sparkles } from 'lucide-react';
+import defaultAvatar from '../assets/profile.jpg';
+
 
 const testimonials = [
   {
@@ -6,21 +8,24 @@ const testimonials = [
     role: "Volunteer Coordinator",
     content: "VolunteerHub transformed how we organize community events. The platform is intuitive and has helped us engage 3x more volunteers!",
     rating: 5,
-    avatar: "https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150&h=150&fit=crop&crop=face"
+    avatar: "https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150&h=150&fit=crop&crop=face",
+    avatarAlt: defaultAvatar
   },
-  {
+  { 
     name: "Rahul Patel",
     role: "Senior Volunteer",
     content: "Found my passion for teaching through this platform. The matching system is spot-on and events are always meaningful.",
     rating: 5,
-    avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face"
+    avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face",
+    avatarAlt: defaultAvatar
   },
   {
     name: "NGO Mumbai",
     role: "Organization Lead",
     content: "Streamlined our volunteer management completely. Real-time tracking and communication features are game-changers.",
     rating: 5,
-    avatar: "https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=150&h=150&fit=crop&crop=face"
+    avatar: "https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=150&h=150&fit=crop&crop=face",
+    avatarAlt: defaultAvatar
   }
 ];
 
@@ -81,6 +86,10 @@ const Testimonials = () => {
                     <img 
                       src={testimonial.avatar} 
                       alt={testimonial.name}
+                      onError={(event) => {
+                        event.currentTarget.onerror = null;
+                        event.currentTarget.src = testimonial.avatarAlt;
+                      }}
                       className="w-16 h-16 rounded-2xl object-cover grayscale group-hover:grayscale-0 transition-all duration-500 shadow-sm"
                     />
                     <div className="absolute -bottom-2 -right-2 w-6 h-6 bg-emerald-500 rounded-lg flex items-center justify-center border-2 border-white shadow-sm opacity-0 group-hover:opacity-100 transition-all duration-500 scale-50 group-hover:scale-100">

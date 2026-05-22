@@ -2,7 +2,7 @@ import { useAuth } from "./features/auth/hooks/useAuth";
 import { useCallback, useMemo } from "react";
 export const useApi = () => {
   const { user } = useAuth();
-  const BASE_URL = "http://localhost:8080/api";
+  const BASE_URL = `${import.meta.env.VITE_API_URL || "http://localhost:8080"}/api`;
 
 
 

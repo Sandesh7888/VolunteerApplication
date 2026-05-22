@@ -30,7 +30,7 @@ export function AuthProvider({ children }) {
     const currentId = user?.userId || user?.id;
     if (!currentId) return;
     try {
-      const response = await fetch(`http://localhost:8080/api/users/${currentId}`);
+      const response = await fetch(`${import.meta.env.VITE_API_URL || "http://localhost:8080"}/api/users/${currentId}`);
       if (response.ok) {
         const updatedData = await response.json();
         // Normalize: Ensure frontend consistently uses userId

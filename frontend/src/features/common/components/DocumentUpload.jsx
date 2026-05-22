@@ -82,7 +82,7 @@ export default function DocumentUpload({ targetUserId, isAdminView, onVerificati
   };
 
   const getDocUrl = (fileName) => {
-    return `http://localhost:8080/api/documents/download/${fileName}`;
+    return `${import.meta.env.VITE_API_URL || "http://localhost:8080"}/api/documents/download/${fileName}`;
   };
 
   const handleDelete = async (documentId) => {

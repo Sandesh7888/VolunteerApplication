@@ -27,7 +27,7 @@ export default function ResetPassword() {
     setSuccess("");
 
     try {
-      const res = await fetch(`http://localhost:8080/api/auth/reset-password?email=${email}&otp=${otp}&newPassword=${newPassword}`, {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || "http://localhost:8080"}/api/auth/reset-password?email=${email}&otp=${otp}&newPassword=${newPassword}`, {
         method: "POST"
       });
 

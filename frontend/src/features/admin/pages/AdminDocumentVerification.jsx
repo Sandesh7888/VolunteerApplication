@@ -75,7 +75,7 @@ export default function AdminDocumentVerification() {
   };
 
   const getDocUrl = (fileName) => {
-    return `http://localhost:8080/api/documents/download/${fileName}`;
+    return `${import.meta.env.VITE_API_URL || "http://localhost:8080"}/api/documents/download/${fileName}`;
   };
 
   // Group documents by user

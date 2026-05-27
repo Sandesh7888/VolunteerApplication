@@ -10,4 +10,9 @@ public class HealthCheckController {
     public String healthCheck() {
         return "Volunteer Hub API is running!";
     }
+
+    @GetMapping("favicon.ico")
+    public org.springframework.http.ResponseEntity<Void> disableFavicon() {
+        return org.springframework.http.ResponseEntity.noContent().build();
+    }
 }

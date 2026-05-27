@@ -6,9 +6,11 @@ import com.volunteerhub.model.SupportTicket;
 import com.volunteerhub.service.EmailService;
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
+import java.util.concurrent.CompletableFuture;
 
 @Service
 @RequiredArgsConstructor
@@ -16,20 +18,29 @@ public class EmailServiceImpl implements EmailService {
 
         private final JavaMailSender mailSender;
 
+        @Value("${spring.mail.username:}")
+        private String fromEmail;
+
         private void sendEmail(String to, String subject, String content) {
-                try {
-                        MimeMessage message = mailSender.createMimeMessage();
-                        MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-                        helper.setTo(to);
-                        helper.setSubject(subject);
-                        helper.setText(content, true);
-                        mailSender.send(message);
-                } catch (Exception e) {
-                        // Log error with full stack trace for better debugging
-                        System.err.println("❌ EMAIL SEND FAILED: " + e.getMessage());
-                        e.printStackTrace();
-                        System.out.println("⚠️ IF YOU ARE IN DEV MODE, CHECK CONSOLE FOR OTP/LINKS ⚠️");
-                }
+                CompletableFuture.runAsync(() -> {
+                        try {
+                                MimeMessage message = mailSender.createMimeMessage();
+                                MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+                                
+                                String sender = (fromEmail != null && !fromEmail.trim().isEmpty()) ? fromEmail.trim() : "noreply@volunteerhub.com";
+                                helper.setFrom(sender, "Volunteer Hub");
+                                helper.setTo(to);
+                                helper.setSubject(subject);
+                                helper.setText(content, true);
+                                mailSender.send(message);
+                                System.out.println("📧 EMAIL SENT SUCCESSFULLY to: " + to);
+                        } catch (Exception e) {
+                                // Log error with full stack trace for better debugging
+                                System.err.println("❌ EMAIL SEND FAILED to " + to + ": " + e.getMessage());
+                                e.printStackTrace();
+                                System.out.println("⚠️ IF YOU ARE IN DEV MODE, CHECK CONSOLE FOR OTP/LINKS ⚠️");
+                        }
+                });
         }
 
         private String wrapWithFormalTemplate(String title, String content, String vmsId) {

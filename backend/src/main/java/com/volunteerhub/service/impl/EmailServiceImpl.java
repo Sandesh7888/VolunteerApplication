@@ -21,13 +21,17 @@ public class EmailServiceImpl implements EmailService {
         @Value("${spring.mail.from:${spring.mail.username:}}")
         private String fromEmail;
 
+        @Value("${spring.mail.username:}")
+        private String mailUsername;
+
         private void sendEmail(String to, String subject, String content) {
                 CompletableFuture.runAsync(() -> {
                         try {
                                 MimeMessage message = mailSender.createMimeMessage();
                                 MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
                                 
-                                String sender = (fromEmail != null && !fromEmail.trim().isEmpty()) ? fromEmail.trim() : "noreply@volunteerhub.com";
+                                String sender = (fromEmail != null && !fromEmail.trim().isEmpty()) ? fromEmail.trim() : 
+                                                ((mailUsername != null && !mailUsername.trim().isEmpty()) ? mailUsername.trim() : "noreply@volunteerhub.com");
                                 helper.setFrom(sender, "Volunteer Hub");
                                 helper.setTo(to);
                                 helper.setSubject(subject);
